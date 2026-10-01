@@ -1,0 +1,25 @@
+Metadata-Version: 2.4
+Name: conceptflow
+Version: 0.1.0
+Summary: A multimodal, source-grounded adaptive AI study companion
+Requires-Python: >=3.11
+Requires-Dist: pydantic>=2.7
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Provides-Extra: ingestion
+Requires-Dist: pypdf>=5.0; extra == "ingestion"
+Requires-Dist: pymupdf>=1.24; extra == "ingestion"
+Requires-Dist: python-pptx>=0.6.23; extra == "ingestion"
+Requires-Dist: pillow>=10.0; extra == "ingestion"
+Requires-Dist: pytesseract>=0.3.10; extra == "ingestion"
+Requires-Dist: faster-whisper>=1.0; extra == "ingestion"
+Provides-Extra: retrieval
+Requires-Dist: rank-bm25>=0.2.2; extra == "retrieval"
+Requires-Dist: sentence-transformers>=3.0; extra == "retrieval"
+Requires-Dist: chromadb>=0.5; extra == "retrieval"
+Provides-Extra: app
+Requires-Dist: fastapi>=0.111; extra == "app"
+Requires-Dist: streamlit>=1.36; extra == "app"
+Requires-Dist: uvicorn[standard]>=0.30; extra == "app"
+Provides-Extra: evaluation
+Requires-Dist: ragas>=0.2; extra == "evaluation"

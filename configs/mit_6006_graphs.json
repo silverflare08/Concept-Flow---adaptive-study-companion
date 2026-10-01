@@ -1,0 +1,45 @@
+{
+  "course_id": "mit-6006-graphs",
+  "title": "MIT 6.006: Graph Algorithms",
+  "license_note": "Use MIT OpenCourseWare resources according to their stated terms and credit MIT OpenCourseWare in the demo and README.",
+  "resources": [
+    {
+      "source_id": "mit-6006-lec10-video",
+      "type": "video",
+      "title": "Lecture 10: Depth-First Search",
+      "landing_page": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/lecture-10-depth-first-search/",
+      "role": "timestamped lecture transcript and spoken explanation"
+    },
+    {
+      "source_id": "mit-6006-lec10-slides",
+      "type": "slide",
+      "title": "Lecture 10: Depth-First Search slides",
+      "url": "https://live.ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/f3e349e0eb3288592289d2c81e0c4f4d_MIT6_006S20_lec10.pdf",
+      "role": "slide/page citations, figures, and definitions"
+    },
+    {
+      "source_id": "open-textbook-chapter",
+      "type": "pdf",
+      "title": "Open textbook graph-algorithms chapter",
+      "status": "to be selected and downloaded before the ingestion demo",
+      "role": "textbook-style explanatory source for cross-source retrieval"
+    }
+  ],
+  "concepts": [
+    {"concept_id": "graph-representations", "name": "Graph representations", "topic": "Graph foundations", "description": "Vertices, edges, directed graphs, and adjacency representations."},
+    {"concept_id": "bfs", "name": "Breadth-first search", "topic": "Graph traversal", "description": "Layered graph traversal using a queue."},
+    {"concept_id": "dfs", "name": "Depth-first search", "topic": "Graph traversal", "description": "Recursive or stack-based graph traversal."},
+    {"concept_id": "cycle-detection", "name": "Cycle detection", "topic": "Graph traversal", "description": "Detecting cycles using DFS exploration states."},
+    {"concept_id": "topological-sort", "name": "Topological sorting", "topic": "Directed acyclic graphs", "description": "Ordering vertices consistent with directed dependencies."},
+    {"concept_id": "weighted-graphs", "name": "Weighted graphs", "topic": "Shortest paths", "description": "Graphs whose edges carry numerical costs."},
+    {"concept_id": "dijkstra", "name": "Dijkstra's algorithm", "topic": "Shortest paths", "description": "Greedy single-source shortest paths for non-negative weights."}
+  ],
+  "prerequisite_edges": [
+    {"prerequisite_id": "graph-representations", "dependent_id": "bfs"},
+    {"prerequisite_id": "graph-representations", "dependent_id": "dfs"},
+    {"prerequisite_id": "dfs", "dependent_id": "cycle-detection"},
+    {"prerequisite_id": "dfs", "dependent_id": "topological-sort"},
+    {"prerequisite_id": "graph-representations", "dependent_id": "weighted-graphs"},
+    {"prerequisite_id": "weighted-graphs", "dependent_id": "dijkstra"}
+  ]
+}

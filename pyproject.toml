@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "conceptflow"
+version = "0.1.0"
+description = "A multimodal, source-grounded adaptive AI study companion"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+ingestion = ["pypdf>=5.0", "pymupdf>=1.24", "python-pptx>=0.6.23", "pillow>=10.0", "pytesseract>=0.3.10", "faster-whisper>=1.0"]
+retrieval = ["rank-bm25>=0.2.2", "sentence-transformers>=3.0", "chromadb>=0.5"]
+app = ["fastapi>=0.111", "streamlit>=1.36", "uvicorn[standard]>=0.30"]
+evaluation = ["ragas>=0.2"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
