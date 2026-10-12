@@ -46,7 +46,7 @@ class CitationAnchor(BaseModel):
 
     def label(self) -> str:
         if self.source_type is SourceType.PDF:
-            location = f"p. {self.page}"
+            location = f"PDF page {self.page}"
         elif self.source_type is SourceType.SLIDE:
             location = f"slide {self.slide}"
         else:

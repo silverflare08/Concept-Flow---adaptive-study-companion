@@ -14,6 +14,9 @@ class Concept(BaseModel):
     name: str = Field(min_length=1)
     topic: str = Field(min_length=1)
     description: str = Field(min_length=1)
+    evidence_chunk_ids: list[str] = Field(default_factory=list)
+    study_steps: list[str] = Field(default_factory=list)
+    key_points: list[str] = Field(default_factory=list)
 
 
 class PrerequisiteEdge(BaseModel):
@@ -73,3 +76,23 @@ class CourseMap(BaseModel):
             for edge in self.prerequisite_edges
             if edge.dependent_id == concept_id
         }
+
+    def concept_by_id(self, concept_id: str) -> Concept:
+        """Return one concept by its stable identifier."""
+        for concept in self.concepts:
+            if concept.concept_id == concept_id:
+                return concept
+        raise KeyError(f"Unknown concept: {concept_id}")
+
+    def learning_order(self) -> list[str]:
+        """Return a stable prerequisite-first order for a study roadmap."""
+        prerequisites = {concept.concept_id: self.prerequisites_of(concept.concept_id) for concept in self.concepts}
+        remaining = set(prerequisites)
+        ordered: list[str] = []
+        while remaining:
+            ready = [concept.concept_id for concept in self.concepts if concept.concept_id in remaining and prerequisites[concept.concept_id].issubset(ordered)]
+            if not ready:  # Defensive guard; validation already rejects cycles.
+                raise ValueError("course map has no valid learning order")
+            ordered.extend(ready)
+            remaining.difference_update(ready)
+        return ordered

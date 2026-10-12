@@ -36,3 +36,59 @@ def test_course_map_rejects_cycles() -> None:
                 PrerequisiteEdge(prerequisite_id="b", dependent_id="a"),
             ],
         )
+def test_course_map_finds_a_concept_by_id() -> None:
+    course = CourseMap(
+        course_id="dbms-basics",
+        title="DBMS basics",
+        concepts=[
+            Concept(
+                concept_id="functional-dependency",
+                name="Functional dependency",
+                topic="Normalisation",
+                description="A relationship between attributes.",
+            )
+        ],
+    )
+
+    concept = course.concept_by_id("functional-dependency")
+
+    assert concept.name == "Functional dependency"
+
+
+def test_course_map_finds_a_later_concept_by_id() -> None:
+    course = CourseMap(
+        course_id="dbms-basics",
+        title="DBMS basics",
+        concepts=[
+            Concept(
+                concept_id="functional-dependency",
+                name="Functional dependency",
+                topic="Normalisation",
+                description="A relationship between attributes.",
+            ),
+            Concept(
+                concept_id="second-normal-form",
+                name="Second normal form",
+                topic="Normalisation",
+                description="Removes partial dependencies.",
+            ),
+        ],
+    )
+
+    concept = course.concept_by_id("second-normal-form")
+
+    assert concept.name == "Second normal form"
+
+
+def test_course_map_returns_prerequisite_first_learning_order() -> None:
+    course = CourseMap(
+        course_id="dbms-basics",
+        title="DBMS basics",
+        concepts=[
+            Concept(concept_id="dependency", name="Dependency", topic="Normalisation", description="Foundation."),
+            Concept(concept_id="second-normal-form", name="Second normal form", topic="Normalisation", description="Advanced."),
+        ],
+        prerequisite_edges=[PrerequisiteEdge(prerequisite_id="dependency", dependent_id="second-normal-form")],
+    )
+
+    assert course.learning_order() == ["dependency", "second-normal-form"]

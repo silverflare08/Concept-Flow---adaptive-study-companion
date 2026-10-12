@@ -1,23 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, FileText, FolderPlus, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Upload, X } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, FileText, FolderPlus, GitBranch, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Upload, X } from "lucide-react";
 import "./index.css";
+import StudyViews from "./StudyViews.jsx";
 
 // In development, Vite forwards /api to FastAPI. This avoids browser-specific
 // localhost restrictions; deployment can override it with VITE_API_URL.
 const API = import.meta.env.VITE_API_URL || "";
-const navItems = [["Home", Home], ["Learn", BookOpen], ["Practise", Target], ["Progress", BarChart3], ["Materials", Layers3]];
+const navItems = [["Home", Home], ["Learn", BookOpen], ["Learning Flow", BookOpen], ["Revision Mind Map", GitBranch], ["Practise", Target], ["Progress", BarChart3], ["Materials", Layers3]];
 
 function App() {
   const [page, setPage] = useState("Home");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [workspace, setWorkspace] = useState({ name: "My study space", source_count: 0, chunk_count: 0, sources: [] });
+  const [courseMap, setCourseMap] = useState(null);
+  const [guideProgress, setGuideProgress] = useState(null);
   const [query, setQuery] = useState("");
   const [tutorState, setTutorState] = useState({ status: "idle", reply: null, message: "" });
   const [notice, setNotice] = useState("");
 
   async function refreshWorkspace() {
-    try { const response = await fetch(`${API}/api/workspace`); if (response.ok) { setWorkspace(await response.json()); setNotice(""); } }
+    try { const response = await fetch(`${API}/api/workspace`); if (response.ok) { const data = await response.json(); setWorkspace(data); const mapResponse = await fetch(`${API}/api/course-map`); if (mapResponse.ok) setCourseMap((await mapResponse.json()).course_map); setNotice(""); } }
     catch { setNotice("The frontend is running, but the Python API is not connected yet. Start it with uvicorn."); }
   }
   useEffect(() => { refreshWorkspace(); }, []);
@@ -25,13 +28,13 @@ function App() {
   async function createWorkspace(name) {
     const response = await fetch(`${API}/api/workspace`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
     if (!response.ok) throw new Error("Could not create course workspace.");
-    const data = await response.json(); setWorkspace(data); setNotice(`Created “${data.name}”. Add materials to begin.`); return data;
+    const data = await response.json(); setWorkspace(data); setCourseMap(null); setGuideProgress(null); setNotice(`Created “${data.name}”. Add materials to begin.`); return data;
   }
   async function uploadMaterials(files) {
     const form = new FormData(); Array.from(files).forEach(file => form.append("files", file));
     const response = await fetch(`${API}/api/materials`, { method: "POST", body: form });
     const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Upload failed.");
-    setWorkspace(data.workspace); setNotice(data.reports.map(report => report.message || `${report.name}: ${report.status} (${report.chunks || 0} chunks)`).join(" · "));
+    setWorkspace(data.workspace); setCourseMap(null); setNotice(data.reports.map(report => report.message || `${report.name}: ${report.status} (${report.chunks || 0} chunks)`).join(" · "));
   }
   async function askTutor() {
     if (!query.trim()) return; setTutorState({ status: "loading", reply: null, message: "" });
@@ -41,10 +44,39 @@ function App() {
       setTutorState({ status: data.coverage === "not_covered" ? "empty" : "ready", reply: data, message: data.coverage === "not_covered" ? data.answer : "" });
     } catch (error) { setTutorState({ status: "error", reply: null, message: error.message }); }
   }
+  async function generateCourseMap(view) {
+    setGuideProgress({ status: "running", view, completed_batches: 0, total_batches: 0 });
+    try {
+      const response = await fetch(`${API}/api/study-guide/generate`, { method: "POST" });
+      const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Could not prepare your study views.");
+      let job = data.job;
+      while (job?.status === "running") {
+        setGuideProgress({ ...job, view });
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const statusResponse = await fetch(`${API}/api/study-guide/status`);
+        if (!statusResponse.ok) throw new Error("Could not check study guide progress.");
+        const status = await statusResponse.json();
+        if (status.job?.job_id !== data.job.job_id) throw new Error("Material changed. Generate study views again.");
+        job = status.job;
+      }
+      if (job?.status !== "complete") throw new Error(job?.error || "Material changed. Generate study views again.");
+      const mapResponse = await fetch(`${API}/api/course-map`);
+      if (!mapResponse.ok) throw new Error("Could not load your study views.");
+      const result = await mapResponse.json(); setCourseMap(result.course_map); setGuideProgress({ ...job, view });
+      setWorkspace(current => ({ ...current, course_map_ready: true })); return result.course_map;
+    } catch (error) { setGuideProgress({ status: "failed", view, error: error.message }); throw error; }
+  }
+  function startTutorFor(conceptName) {
+    setTutorState({ status: "idle", reply: null, message: "" });
+    setQuery(`Teach me ${conceptName} in simple words, using my course material.`);
+    setPage("Learn");
+  }
 
   const content = {
     Home: <Dashboard workspace={workspace} setPage={setPage} notice={notice} />,
     Learn: <Learn workspace={workspace} query={query} setQuery={setQuery} askTutor={askTutor} state={tutorState} />,
+    "Learning Flow": <StudyViews mode="learning" workspace={workspace} guide={courseMap} generate={generateCourseMap} progress={guideProgress} setPage={setPage} startTutorFor={startTutorFor} api={API}/>,
+    "Revision Mind Map": <StudyViews mode="revision" workspace={workspace} guide={courseMap} generate={generateCourseMap} progress={guideProgress} setPage={setPage} startTutorFor={startTutorFor} api={API}/>,
     Practise: <Practise workspace={workspace} setPage={setPage} />,
     Progress: <Progress workspace={workspace} setPage={setPage} />,
     Materials: <Materials workspace={workspace} createWorkspace={createWorkspace} uploadMaterials={uploadMaterials} notice={notice} />

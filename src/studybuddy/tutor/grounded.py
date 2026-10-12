@@ -37,6 +37,7 @@ def _citation(chunk: KnowledgeChunk) -> dict[str, object]:
         "page": chunk.citation.page,
         "slide": chunk.citation.slide,
         "start_seconds": chunk.citation.start_seconds,
+        "target_uri": chunk.citation.target_uri(),
         "excerpt": chunk.text[:280].strip(),
     }
 
@@ -87,6 +88,31 @@ def call_ollama(prompt: str) -> str:
     answer = body.get("message", {}).get("content", "").strip()
     if not answer:
         raise RuntimeError("The local tutor model returned an empty answer.")
+    return answer
+
+
+def call_ollama_json(prompt: str) -> str:
+    """Ask local Ollama for a JSON-only response used by structured features."""
+    endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
+    model = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
+    payload = json.dumps(
+        {
+            "model": model,
+            "stream": False,
+            "format": "json",
+            "messages": [{"role": "user", "content": prompt}],
+            "options": {"temperature": 0.1, "num_ctx": 8192},
+        }
+    ).encode("utf-8")
+    request = Request(endpoint, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urlopen(request, timeout=120) as response:  # nosec B310 - local configurable endpoint
+            body = json.loads(response.read().decode("utf-8"))
+    except URLError as error:
+        raise RuntimeError("Local tutor model is unavailable. Start Ollama and try again.") from error
+    answer = body.get("message", {}).get("content", "").strip()
+    if not answer:
+        raise RuntimeError("The local tutor model returned an empty map draft.")
     return answer
 
 

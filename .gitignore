@@ -22,7 +22,7 @@ htmlcov/
 .mypy_cache/
 .pyright/
 .ruff_cache/
-.test-tmp-codex/
+.test-tmp-*/
 
 # Local IDE and operating-system files
 .idea/

@@ -14,7 +14,7 @@ def test_tutor_returns_generated_answer_with_verified_citation() -> None:
     reply = tutor_answer("Explain second normal form", chunks, generate=lambda prompt: "2NF removes partial dependency.")
     assert reply.answer == "2NF removes partial dependency."
     assert reply.coverage == "course_backed"
-    assert reply.citations[0]["label"] == "DBMS notes, p. 14"
+    assert reply.citations[0]["label"] == "DBMS notes, PDF page 14"
     assert "partial dependency" in reply.citations[0]["excerpt"]
 
 
@@ -27,5 +27,5 @@ def test_tutor_refuses_question_without_course_evidence() -> None:
 def test_tutor_prompt_contains_the_question_evidence_and_grounding_rule() -> None:
     prompt = build_tutor_prompt("What is 2NF?", [_chunk("Second normal form removes partial dependency.")])
     assert "What is 2NF?" in prompt
-    assert "DBMS notes, p. 14" in prompt
+    assert "DBMS notes, PDF page 14" in prompt
     assert "closed book" in prompt
