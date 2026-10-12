@@ -1,5 +1,13 @@
 # Architecture decisions
 
+## Current implementation boundary
+
+The current local prototype implements citation-preserving PDF/PPTX text
+ingestion, BM25 retrieval, and a grounded tutor route that calls a local Ollama
+model. The remaining sections describe decisions for planned Track D milestones
+such as video processing, visual extraction, dense retrieval, assessments, and
+evaluation. They are design commitments, not claims of completed features.
+
 ## Citation metadata is a first-class contract
 
 The parser produces `SourceSegment`, never plain text. Every segment has one

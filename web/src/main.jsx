@@ -3,7 +3,9 @@ import { createRoot } from "react-dom/client";
 import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, FileText, FolderPlus, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Upload, X } from "lucide-react";
 import "./index.css";
 
-const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+// In development, Vite forwards /api to FastAPI. This avoids browser-specific
+// localhost restrictions; deployment can override it with VITE_API_URL.
+const API = import.meta.env.VITE_API_URL || "";
 const navItems = [["Home", Home], ["Learn", BookOpen], ["Practise", Target], ["Progress", BarChart3], ["Materials", Layers3]];
 
 function App() {
@@ -11,11 +13,11 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [workspace, setWorkspace] = useState({ name: "My study space", source_count: 0, chunk_count: 0, sources: [] });
   const [query, setQuery] = useState("");
-  const [searchState, setSearchState] = useState({ status: "idle", result: null, message: "" });
+  const [tutorState, setTutorState] = useState({ status: "idle", reply: null, message: "" });
   const [notice, setNotice] = useState("");
 
   async function refreshWorkspace() {
-    try { const response = await fetch(`${API}/api/workspace`); if (response.ok) setWorkspace(await response.json()); }
+    try { const response = await fetch(`${API}/api/workspace`); if (response.ok) { setWorkspace(await response.json()); setNotice(""); } }
     catch { setNotice("The frontend is running, but the Python API is not connected yet. Start it with uvicorn."); }
   }
   useEffect(() => { refreshWorkspace(); }, []);
@@ -31,18 +33,18 @@ function App() {
     const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Upload failed.");
     setWorkspace(data.workspace); setNotice(data.reports.map(report => report.message || `${report.name}: ${report.status} (${report.chunks || 0} chunks)`).join(" · "));
   }
-  async function searchCourse() {
-    if (!query.trim()) return; setSearchState({ status: "loading", result: null, message: "" });
+  async function askTutor() {
+    if (!query.trim()) return; setTutorState({ status: "loading", reply: null, message: "" });
     try {
-      const response = await fetch(`${API}/api/search`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: query }) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Search failed.");
-      setSearchState(data.results.length ? { status: "ready", result: data.results[0], message: "" } : { status: "empty", result: null, message: "Not covered by your uploaded material." });
-    } catch (error) { setSearchState({ status: "error", result: null, message: error.message }); }
+      const response = await fetch(`${API}/api/tutor`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: query }) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Tutor request failed.");
+      setTutorState({ status: data.coverage === "not_covered" ? "empty" : "ready", reply: data, message: data.coverage === "not_covered" ? data.answer : "" });
+    } catch (error) { setTutorState({ status: "error", reply: null, message: error.message }); }
   }
 
   const content = {
     Home: <Dashboard workspace={workspace} setPage={setPage} notice={notice} />,
-    Learn: <Learn workspace={workspace} query={query} setQuery={setQuery} searchCourse={searchCourse} state={searchState} />,
+    Learn: <Learn workspace={workspace} query={query} setQuery={setQuery} askTutor={askTutor} state={tutorState} />,
     Practise: <Practise workspace={workspace} setPage={setPage} />,
     Progress: <Progress workspace={workspace} setPage={setPage} />,
     Materials: <Materials workspace={workspace} createWorkspace={createWorkspace} uploadMaterials={uploadMaterials} notice={notice} />
@@ -64,8 +66,8 @@ function Dashboard({ workspace, setPage, notice }) { const hasSources = workspac
 function Metric({ icon, label, value, detail, color }) { const colors = { sky: "bg-sky/45", mint: "bg-mint/45", peach: "bg-peach/45" }; return <div className={`glass-card ${colors[color]} p-5`}><div className="mb-4 inline-flex rounded-xl bg-white p-2 text-plum shadow-sm">{icon}</div><p className="text-sm text-slate-500">{label}</p><p className="mt-1 text-xl font-extrabold">{value}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>; }
 function Step({ number, title, text }) { return <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-black text-plum">{number}</p><p className="mt-2 font-bold">{title}</p><p className="mt-1 text-xs leading-5 text-slate-500">{text}</p></div>; }
 
-function Learn({ workspace, query, setQuery, searchCourse, state }) { if (!workspace.source_count) return <div className="space-y-6"><Title eyebrow="Evidence-first tutoring" title="Ask about your course" body="Search begins once you add your own study material. ConceptFlow will search only that course workspace."/><EmptyState icon={<FolderPlus size={24}/>} title="Your workspace is empty" body="Upload a PDF or slide deck first, then ask questions in any subject—from biology and law to machine learning and literature."/></div>; return <div className="mx-auto max-w-4xl space-y-6"><Title eyebrow="Evidence-first tutoring" title="Ask about your course" body="ConceptFlow searches your uploaded material first. It does not present unsupported answers as course knowledge."/><div className="glass-card p-3"><div className="flex flex-col gap-3 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-4 top-3.5 text-slate-400" size={19}/><input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && searchCourse()} className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 outline-none transition focus:border-plum" placeholder="Ask a question about your uploaded material"/></div><button onClick={searchCourse} className="primary-button justify-center">{state.status === "loading" ? "Searching…" : "Find evidence"}<Search size={17}/></button></div></div>{state.result && <EvidenceCard result={state.result}/>} {state.status === "empty" && <EmptyState icon={<CircleHelp size={24}/>} title="Not covered by your material" body={state.message}/>} {state.status === "error" && <div className="rounded-2xl bg-peach p-5 text-sm text-slate-700"><b>Search unavailable:</b> {state.message}</div>}</div>; }
-function EvidenceCard({ result }) { return <div className="glass-card border-l-4 border-l-plum p-6"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><span className="inline-flex items-center gap-2 rounded-full bg-mint px-3 py-1 text-xs font-bold text-emerald-700"><CheckCircle2 size={14}/> Course-backed evidence</span><span className="text-sm text-slate-500">{result.citation.label}</span></div><p className="text-lg leading-8 text-slate-700">“{result.text}”</p><div className="mt-5 flex flex-wrap gap-2"><span className="rounded-xl bg-sky px-3 py-2 text-sm font-semibold text-slate-600">Source: {result.citation.source_name}</span>{result.concepts?.map(item => <span key={item} className="rounded-xl bg-lilac px-3 py-2 text-sm font-semibold text-plum">{item}</span>)}</div></div>; }
+function Learn({ workspace, query, setQuery, askTutor, state }) { if (!workspace.source_count) return <div className="space-y-6"><Title eyebrow="Evidence-first tutoring" title="Ask about your course" body="Tutoring begins once you add your own study material. ConceptFlow will teach only from that course workspace."/><EmptyState icon={<FolderPlus size={24}/>} title="Your workspace is empty" body="Upload a PDF or slide deck first, then ask questions in any subject—from biology and law to machine learning and literature."/></div>; return <div className="mx-auto max-w-4xl space-y-6"><Title eyebrow="Evidence-first tutoring" title="Learn with your course material" body="ConceptFlow retrieves your material before teaching. It clearly says when the course does not cover a question."/><div className="glass-card p-3"><div className="flex flex-col gap-3 sm:flex-row"><div className="relative flex-1"><MessageSquareText className="absolute left-4 top-3.5 text-slate-400" size={19}/><input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && askTutor()} className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 outline-none transition focus:border-plum" placeholder="For example: Explain this topic in simple words"/></div><button onClick={askTutor} className="primary-button justify-center">{state.status === "loading" ? "Teaching…" : "Ask tutor"}<ArrowRight size={17}/></button></div></div>{state.reply && state.status === "ready" && <TutorCard reply={state.reply}/>} {state.status === "empty" && <EmptyState icon={<CircleHelp size={24}/>} title="Not covered by your material" body={state.message}/>} {state.status === "error" && <div className="rounded-2xl bg-peach p-5 text-sm text-slate-700"><b>Tutor unavailable:</b> {state.message}<p className="mt-2">Make sure Ollama is running and the qwen2.5:3b-instruct model is installed.</p></div>}</div>; }
+function TutorCard({ reply }) { return <div className="glass-card border-l-4 border-l-plum p-6"><div className="mb-4 flex flex-wrap items-center gap-3"><span className="inline-flex items-center gap-2 rounded-full bg-mint px-3 py-1 text-xs font-bold text-emerald-700"><CheckCircle2 size={14}/> Course-backed explanation</span><span className="text-xs text-slate-500">Sources are verified by ConceptFlow</span></div><p className="whitespace-pre-wrap text-lg leading-8 text-slate-700">{reply.answer}</p><div className="mt-5"><p className="text-xs font-bold uppercase tracking-[.14em] text-slate-500">Why this answer is supported</p><div className="mt-3 grid gap-3">{reply.citations.map(citation => <div key={citation.label} className="rounded-2xl bg-sky/35 p-4"><p className="font-bold text-slate-700">From {citation.source_name} · {citation.page ? `PDF page ${citation.page}` : citation.slide ? `Slide ${citation.slide}` : citation.label}</p><p className="mt-2 text-sm leading-6 text-slate-600">“{citation.excerpt}”</p></div>)}</div></div><div className="mt-5 rounded-2xl bg-lilac/50 p-4 text-sm text-slate-700"><b>Next step:</b> {reply.follow_up}</div></div>; }
 function Title({ eyebrow, title, body }) { return <div><p className="eyebrow">{eyebrow}</p><h1 className="mt-2 text-3xl font-extrabold">{title}</h1><p className="mt-2 max-w-2xl text-slate-600">{body}</p></div>; }
 
 function Practise({ workspace, setPage }) { return <div className="space-y-6"><Title eyebrow="Adaptive assessment" title="Practise what matters next" body="Assessment generation will be based on the concepts and prerequisites extracted from your uploaded course, not a fixed DSA quiz."/>{workspace.source_count ? <EmptyState icon={<BrainCircuit size={24}/>} title="Assessment generation is the next AI milestone" body="Your material is indexed. Next we will use its concepts and cited evidence to generate, validate, and adapt questions for this specific course."/> : <EmptyState icon={<FolderPlus size={24}/>} title="Add course material first" body="Upload a PDF or slide deck before creating a source-grounded assessment." action={<button onClick={() => setPage("Materials")} className="primary-button">Add materials <ArrowRight size={17}/></button>}/>}</div>; }

@@ -3,9 +3,19 @@
 This document converts each Track D requirement into an observable product
 behavior. It is both the build checklist and the final demo checklist.
 
-## Scope decision
+## Implementation status (October 2026)
 
-The demo will use **one coherent public course module** with at least one video,
+This is a planning and acceptance document, not a claim that every row below is
+already implemented. The working prototype currently supports PDF/PPTX upload,
+page/slide-preserving chunks, BM25 evidence retrieval, and a local
+source-grounded tutor through Ollama. Video transcription, visual extraction,
+course mapping, assessment, persistent learner records, and formal evaluation
+remain planned milestones.
+
+## Hackathon evaluation scope
+
+The product accepts material for any subject. For evaluation, the demo will use
+**one coherent public course module** with at least one video,
 one slide deck, and one PDF/textbook source. A narrow course produces a more
 credible knowledge graph, stronger source-location test set, and cleaner demo
 than several disconnected subjects. The source will be selected before

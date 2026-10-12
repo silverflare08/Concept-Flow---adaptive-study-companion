@@ -20,6 +20,7 @@ from studybuddy.ingestion.models import KnowledgeChunk
 from studybuddy.ingestion.pdf import ingest_pdf
 from studybuddy.ingestion.slides import ingest_slides
 from studybuddy.retrieval.bm25 import BM25Index
+from studybuddy.tutor.grounded import tutor_answer
 
 
 UPLOAD_ROOT = Path("data/uploads")
@@ -39,6 +40,7 @@ app = FastAPI(title="ConceptFlow API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1):\d+",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -51,6 +53,10 @@ class WorkspaceRequest(BaseModel):
 class SearchRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
     limit: int = Field(default=5, ge=1, le=10)
+
+
+class TutorRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=1000)
 
 
 def workspace_summary() -> dict[str, object]:
@@ -142,4 +148,21 @@ def search_course(request: SearchRequest) -> dict[str, object]:
             }
             for result in results
         ]
+    }
+
+
+@app.post("/api/tutor")
+def teach_course(request: TutorRequest) -> dict[str, object]:
+    """Teach from retrieved course evidence using the configured LLM provider."""
+    if not workspace.chunks:
+        raise HTTPException(status_code=400, detail="Upload and index study material before asking the tutor.")
+    try:
+        reply = tutor_answer(request.question, workspace.chunks)
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return {
+        "answer": reply.answer,
+        "citations": reply.citations,
+        "follow_up": reply.follow_up,
+        "coverage": reply.coverage,
     }
