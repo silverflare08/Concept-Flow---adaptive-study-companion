@@ -77,6 +77,51 @@ Optional capabilities are installed only when needed:
 pip install -e ".[ingestion,retrieval,app,evaluation]"
 ```
 
+## Try the current foundation
+
+Until the web dashboard is built, run the small terminal demo to see the course
+map, citation-preserving retrieval, refusal of off-topic questions, and learner
+mastery update working together:
+
+```powershell
+python -m studybuddy.demo
+python -m studybuddy.demo --question "Explain quantum entanglement"
+```
+
+## Run the interactive prototype
+
+Install the app dependencies, then launch the pastel Streamlit workspace:
+
+```powershell
+pip install -e ".[app]"
+streamlit run src/studybuddy/app.py
+```
+
+The prototype supports PDF/PPTX parsing and cited keyword search within a local
+course workspace. Video transcription, generated answers, automated concept
+maps, and generated assessments are upcoming work.
+
+## Run the React frontend
+
+The professional frontend is built with React, JavaScript, Vite, and Tailwind
+CSS. It is the interface we will connect to the Python AI backend.
+
+```powershell
+cd web
+npm install
+npm run dev
+```
+
+Open the local URL shown by Vite, normally `http://localhost:5173`.
+
+The React frontend talks to the local Python API. Start it in a second terminal:
+
+```powershell
+cd C:\Users\PALAKM\Downloads\polyglot-shorthand2\studybuddy
+.\.venv\Scripts\Activate.ps1
+uvicorn studybuddy.api:app --reload --port 8000
+```
+
 ## Project structure
 
 ```text

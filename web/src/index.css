@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+body { margin: 0; background: #f8f7fc; color: #263746; }
+button, input { font: inherit; }
+
+@layer components {
+  .glass-card { @apply rounded-3xl border border-white/80 bg-white/80 shadow-soft backdrop-blur; }
+  .nav-item { @apply flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition hover:bg-white hover:text-ink; }
+  .nav-item-active { @apply bg-white text-plum shadow-sm; }
+  .eyebrow { @apply text-xs font-bold uppercase tracking-[0.18em] text-plum/70; }
+  .primary-button { @apply inline-flex items-center gap-2 rounded-xl bg-plum px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-plum/20 transition hover:-translate-y-0.5 hover:bg-[#564777]; }
+  .secondary-button { @apply inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-lavender hover:bg-lilac/40; }
+}

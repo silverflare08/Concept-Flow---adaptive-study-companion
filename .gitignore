@@ -2,8 +2,29 @@
 __pycache__/
 .pytest_cache/
 *.py[cod]
+*.egg-info/
 .env
+.env.*
+!.env.example
 data/uploads/
 data/index/
 tmp/
+web/node_modules/
+web/dist/
 *.sqlite3
+*.db
+*.log
+
+# Test, type-checking, and coverage output
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# Local IDE and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
