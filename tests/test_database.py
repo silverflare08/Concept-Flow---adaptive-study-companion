@@ -158,5 +158,28 @@ def test_assessment_answers_report_and_mastery_are_persistent(tmp_path: Path) ->
     assert progress["average_score"] == 100
     assert progress["answered_questions"] == 1
     assert progress["score_history"][0]["score"] == 100
+    assert progress["mastery_history"][0]["signal"] == "quiz_answer"
+    assert progress["mastery_gain"] > 0
     assert progress["daily_activity"][0]["assessments"] == 1
     assert progress["revision_plan"][0]["topic"] == "Gradient descent"
+
+
+def test_grounded_conversations_create_conservative_mastery_updates(tmp_path: Path) -> None:
+    repository = StudyRepository(tmp_path / "conceptflow.db")
+    course_id = repository.create_course("Machine Learning")
+
+    repository.record_conversation_learning(course_id, ["Gradient descent"])
+    first = repository.topic_masteries(course_id)[0]
+    repository.record_conversation_learning(course_id, ["Gradient descent"])
+    second = repository.topic_masteries(course_id)[0]
+
+    assert first["mastery"] > 0.2
+    assert second["mastery"] > first["mastery"]
+    assert second["attempts"] == 0
+    assert second["conversation_updates"] == 2
+    progress = repository.progress_summary(course_id)
+    assert progress["tutoring_interactions"] == 2
+    assert [event["signal"] for event in progress["mastery_history"]] == [
+        "grounded_conversation", "grounded_conversation",
+    ]
+    assert progress["mastery_gain"] > 0

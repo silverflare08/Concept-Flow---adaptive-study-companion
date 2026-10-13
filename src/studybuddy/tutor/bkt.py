@@ -35,6 +35,18 @@ def update_mastery(
     return posterior + (1 - posterior) * parameters.learn
 
 
+def update_mastery_from_learning_exposure(mastery: float, learning_rate: float = 0.04) -> float:
+    """Apply only BKT's learning transition after a grounded tutoring interaction.
+
+    A conversation is evidence that learning occurred, but not evidence that the
+    learner answered correctly. This deliberately moves mastery much less than a
+    verified quiz response and keeps the two signals distinguishable.
+    """
+    if not 0 <= mastery <= 1 or not 0 <= learning_rate <= 1:
+        raise ValueError("mastery and learning_rate must be in [0, 1]")
+    return mastery + (1 - mastery) * learning_rate
+
+
 def choose_weakest_topic(masteries: dict[str, float], threshold: float = 0.8) -> str | None:
     """Return the lowest-mastery topic still needing practice, if there is one."""
     candidates = [(mastery, topic) for topic, mastery in masteries.items() if mastery < threshold]

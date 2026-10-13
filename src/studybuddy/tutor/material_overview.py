@@ -30,7 +30,10 @@ Create a detailed but readable lesson, not a vague overview. Include:
 - two short self-check questions whose answers are supported by the evidence.
 
 Do not add outside knowledge, invented examples, or a bibliography. Do not claim to cover
-content absent from the evidence. Use concise Markdown and refer naturally to the material.
+content absent from the evidence. Write it like a well-designed study chapter: descriptive
+headings, short paragraphs, labelled definitions, numbered procedures, worked examples, and
+small exam-focus lists. Use only clean Markdown structure. Never use repeated asterisks,
+slashes, raw formatting characters, or ASCII art as decoration.
 {language_instruction}
 Render maths for students, not machines: use readable Unicode symbols or plainly written equations.
 Never emit raw LaTeX delimiters (\\(, \\), \\[, \\], dollar signs) or unexplained backslash commands.

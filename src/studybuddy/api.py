@@ -178,6 +178,34 @@ def workspace_summary() -> dict[str, object]:
     }
 
 
+def learner_context(course_id: str) -> str:
+    masteries = repository.topic_masteries(course_id)
+    if not masteries:
+        return "New learner: no mastery history yet. Teach clearly and use a gentle diagnostic check."
+    weakest = sorted(masteries, key=lambda item: float(item["mastery"]))[:4]
+    strongest = sorted(masteries, key=lambda item: float(item["mastery"]), reverse=True)[:3]
+    describe = lambda item: f"{item['topic']} {round(float(item['mastery']) * 100)}%"
+    return (
+        "Weak or developing topics: " + ", ".join(describe(item) for item in weakest)
+        + ". Stronger topics: " + ", ".join(describe(item) for item in strongest) + "."
+    )
+
+
+def topics_for_chunks(chunks: list[KnowledgeChunk], *, use_active_map: bool = True) -> list[str]:
+    chunk_ids = {chunk.chunk_id for chunk in chunks}
+    if use_active_map and workspace.course_map:
+        mapped = [
+            concept.topic for concept in workspace.course_map.concepts
+            if chunk_ids.intersection(concept.evidence_chunk_ids)
+        ]
+        if mapped:
+            return list(dict.fromkeys(mapped))
+    explicit = [concept for chunk in chunks for concept in chunk.concepts]
+    if explicit:
+        return list(dict.fromkeys(explicit))
+    return list(dict.fromkeys(chunk.citation.source_name for chunk in chunks))
+
+
 def selected_guide_chunks(source_ids: list[str]) -> list[KnowledgeChunk]:
     if not source_ids:
         return list(workspace.chunks)
@@ -207,9 +235,16 @@ def course_map_view(
     concepts = []
     for concept_id in order:
         concept = course_map.concept_by_id(concept_id)
+        clean_name = humanize_math_text(concept.name).replace("**", "").strip("#* /\\")
+        clean_topic = humanize_math_text(concept.topic).replace("**", "").strip("#* /\\")
         concepts.append(
             {
                 **concept.model_dump(),
+                "name": clean_name,
+                "topic": clean_topic,
+                "description": humanize_math_text(concept.description).replace("**", "").strip(),
+                "key_points": [humanize_math_text(point).replace("**", "").strip("#* ") for point in concept.key_points],
+                "study_steps": [humanize_math_text(step).replace("**", "").strip("#* ") for step in concept.study_steps],
                 "prerequisite_ids": sorted(course_map.prerequisites_of(concept_id)),
                 "evidence": [
                     {
@@ -242,7 +277,7 @@ def course_map_view(
         "prerequisite_edges": [edge.model_dump() for edge in course_map.prerequisite_edges],
         "learning_order": order,
         "recommended_concept_id": order[0] if order else None,
-        "revision_concepts": [concept.model_dump() for concept in course_map.concepts],
+        "revision_concepts": concepts,
         "coverage": {
             "indexed_chunks": len(scoped_chunks),
             "mapped_chunks": len({cid for concept in course_map.concepts for cid in concept.evidence_chunk_ids}),
@@ -258,6 +293,18 @@ def assessment_view(record: dict[str, object]) -> dict[str, object]:
     chunks = list(course["chunks"]) if course else []
     chunks_by_id = {chunk.chunk_id: chunk for chunk in chunks}
     completed = record["status"] == "completed"
+    report = record["report"]
+    if report:
+        report = {**report, "feedback": [
+            {
+                **item,
+                "prompt": humanize_math_text(str(item.get("prompt", ""))).replace("**", ""),
+                "correct_answer": humanize_math_text(str(item.get("correct_answer", ""))).replace("**", ""),
+                "feedback": humanize_math_text(str(item.get("feedback", ""))).replace("**", ""),
+                "explanation": humanize_math_text(str(item.get("explanation", ""))).replace("**", ""),
+            }
+            for item in report.get("feedback", [])
+        ]}
     questions = []
     for question in record["questions"]:
         public = {
@@ -291,7 +338,7 @@ def assessment_view(record: dict[str, object]) -> dict[str, object]:
         "config": record["config"],
         "status": record["status"],
         "score": record["score"],
-        "report": record["report"],
+        "report": report,
         "questions": questions,
         "answers": record["answers"] if completed else [],
         "created_at": record["created_at"],
@@ -661,7 +708,10 @@ def teach_course(request: TutorRequest) -> dict[str, object]:
     if not workspace.chunks:
         raise HTTPException(status_code=400, detail="Upload and index study material before asking the tutor.")
     try:
-        reply = tutor_answer(request.question, workspace.chunks, language=request.language)
+        reply = tutor_answer(
+            request.question, workspace.chunks, language=request.language,
+            learner_context=learner_context(workspace.course_id),
+        )
     except RuntimeError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
     response_metadata = {
@@ -676,6 +726,9 @@ def teach_course(request: TutorRequest) -> dict[str, object]:
         response_metadata=response_metadata,
         conversation_id=request.conversation_id,
     )
+    if reply.coverage == "course_backed":
+        used_chunks = [chunk for chunk in workspace.chunks if chunk.chunk_id in set(reply.evidence_chunk_ids)]
+        repository.record_conversation_learning(workspace.course_id, topics_for_chunks(used_chunks))
     return {
         "answer": reply.answer,
         "citations": reply.citations,
@@ -704,6 +757,7 @@ def run_overview_job(
                 "coverage": lesson["coverage"], "mode": "full_material_lesson",
             },
         )
+        repository.record_conversation_learning(course_id, topics_for_chunks(chunks, use_active_map=False))
         job.update(status="complete", result={**lesson, "conversation_id": conversation_id})
     except Exception as error:
         job.update(status="failed", error=str(error))
@@ -744,13 +798,19 @@ def create_assessment(request: AssessmentCreateRequest) -> dict[str, object]:
     if not workspace.chunks:
         raise HTTPException(status_code=400, detail="Upload study material before generating an assessment.")
     try:
+        adaptive_scope = request.scope
+        if not adaptive_scope:
+            adaptive_scope = [
+                str(item["topic"]) for item in repository.topic_masteries(workspace.course_id)
+                if float(item["mastery"]) < 0.7
+            ][:3]
         draft = generate_assessment(
             course_name=workspace.name,
             chunks=workspace.chunks,
             count=request.question_count,
             difficulty=request.difficulty,
             question_types=request.question_types,
-            scope=request.scope,
+            scope=adaptive_scope,
             previous_prompts=repository.previous_question_prompts(workspace.course_id),
             generate_json=call_ollama_json,
             verify_json=call_ollama_json,
@@ -759,7 +819,7 @@ def create_assessment(request: AssessmentCreateRequest) -> dict[str, object]:
         assessment_id = repository.save_assessment(
             workspace.course_id,
             draft,
-            config=request.model_dump(),
+            config={**request.model_dump(), "adaptive_scope": adaptive_scope},
         )
         record = repository.get_assessment(assessment_id)
     except (RuntimeError, ValueError) as error:
@@ -906,6 +966,7 @@ def assessment_export_sections(record: dict[str, object]) -> list[tuple[str, lis
                 f"Correct answer: {item['correct_answer']}",
                 f"Result: {'Correct' if item['correct'] else 'Needs review'}",
                 f"Feedback: {item['feedback']}",
+                f"Worked explanation: {item.get('explanation', '')}",
             ]
             if item.get("misconception"):
                 paragraphs.append(f"Likely misconception: {item['misconception']}")
@@ -931,7 +992,17 @@ def course_map_export_sections(content: dict[str, object], view: str) -> list[tu
             paragraphs.extend(f"{index}. {step}" for index, step in enumerate(concept.get("study_steps", []), start=1))
         else:
             paragraphs.extend(f"- {point}" for point in concept.get("key_points", []))
-        paragraphs.extend(f"- Evidence ID: {chunk_id}" for chunk_id in concept.get("evidence_chunk_ids", []))
+        evidence = concept.get("evidence", [])
+        if evidence:
+            paragraphs.extend(
+                f"- Source: {item.get('label', item.get('source_name', 'Course material'))}"
+                for item in evidence
+            )
+        else:
+            paragraphs.extend(
+                f"- Source reference: {chunk_id}"
+                for chunk_id in concept.get("evidence_chunk_ids", [])
+            )
         sections.append((f"{number}. {concept['name']}", paragraphs))
     return sections
 
@@ -946,10 +1017,19 @@ def generated_artifact_sections(artifact: dict[str, object], view: str) -> list[
             "Weak topics: " + (", ".join(content.get("weak_topics", [])) or "None identified"),
         ])]
         for number, item in enumerate(content.get("feedback", []), start=1):
-            sections.append((f"Question {number}", [
+            paragraphs = [
                 item.get("prompt", ""), f"Your answer: {item.get('response') or '(no answer)'}",
-                f"Correct answer: {item.get('correct_answer', '')}", item.get("feedback", ""),
-            ]))
+                f"Correct answer: {item.get('correct_answer', '')}",
+                f"Feedback: {item.get('feedback', '')}",
+                f"Worked explanation: {item.get('explanation', '')}",
+            ]
+            if item.get("misconception"):
+                paragraphs.append(f"Likely misconception: {item['misconception']}")
+            paragraphs.extend(
+                f"- Source: {citation.get('label', 'Course material')}"
+                for citation in item.get("citations", [])
+            )
+            sections.append((f"Question {number}", paragraphs))
         return sections
     return [("Saved data", [json.dumps(content, indent=2, ensure_ascii=False)])]
 
@@ -1021,6 +1101,13 @@ def download_artifact(
     title = str(artifact["title"])
     if artifact["kind"] == "study_guide":
         title = f"{title} - {'Learning Flow' if view == 'learning' else 'Revision Mind Map'}"
+        record = repository.load_course(str(artifact["course_id"]), include_archived_materials=True)
+        if record is not None:
+            course_map = CourseMap.model_validate(artifact["content"])
+            artifact = {
+                **artifact,
+                "content": course_map_view(course_map, chunks=list(record["chunks"])),
+            }
     try:
         return export_response(
             title=title, sections=generated_artifact_sections(artifact, view),

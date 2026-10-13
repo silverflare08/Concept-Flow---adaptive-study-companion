@@ -35,4 +35,9 @@ def test_pdf_and_word_exports_are_real_downloadable_file_formats() -> None:
     assert pdf.headers["content-disposition"].endswith('filename="biology.pdf"')
     with ZipFile(BytesIO(word.body)) as archive:
         assert "word/document.xml" in archive.namelist()
-        assert b"Biology" in archive.read("word/document.xml")
+        document = archive.read("word/document.xml")
+        assert b"Biology" in document
+        assert b"ConceptFlow study edition" in document
+        styles = archive.read("word/styles.xml")
+        assert b"Heading1" in styles
+        assert b"SourceNote" in styles

@@ -312,6 +312,9 @@ def generate_assessment(
             valid, reason, verified_answer = verification.get(
                 question.question_id, (False, "Verifier omitted this question.", ""),
             )
+            if len(question.explanation.split()) < 18:
+                valid = False
+                reason = "The worked explanation is too short to teach the reasoning clearly."
             if question.question_type == "mcq" and verified_answer.casefold().strip() != question.correct_answer.casefold().strip():
                 valid = False
                 reason = f"Independent verifier selected '{verified_answer}' instead of the proposed answer."

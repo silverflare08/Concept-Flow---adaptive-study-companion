@@ -40,7 +40,7 @@ def mcq_payload(prompt: str = "Which direction does gradient descent use?") -> d
             "difficulty": "easy",
             "options": ["Negative gradient", "Positive gradient", "Random direction", "No direction"],
             "correct_answer": "Negative gradient",
-            "explanation": "The notes explicitly state that parameters move in the negative gradient direction.",
+            "explanation": "The notes state that gradient descent moves parameters in the negative gradient direction. This direction reduces the objective locally, so the negative gradient is the supported answer rather than a positive or random direction.",
             "grading_criteria": [],
             "evidence_chunk_ids": ["optimisation-1"],
         }],

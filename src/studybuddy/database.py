@@ -7,13 +7,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, delete, func, select
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, delete, func, inspect, select, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from studybuddy.course_map import CourseMap
 from studybuddy.ingestion.models import KnowledgeChunk
 from studybuddy.assessment import AssessmentDraft, AssessmentQuestion, QuestionFeedback, question_fingerprint
-from studybuddy.tutor.bkt import update_mastery
+from studybuddy.tutor.bkt import update_mastery, update_mastery_from_learning_exposure
 
 
 def utc_now() -> datetime:
@@ -147,7 +147,23 @@ class TopicMasteryRecord(Base):
     topic: Mapped[str] = mapped_column(String(160), primary_key=True)
     mastery: Mapped[float] = mapped_column(Float, default=0.2)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
+    conversation_updates: Mapped[int] = mapped_column(Integer, default=0)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class MasteryEventRecord(Base):
+    """Auditable learner-model movement produced by one learning signal."""
+
+    __tablename__ = "mastery_events"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
+    topic: Mapped[str] = mapped_column(String(160), index=True)
+    signal: Mapped[str] = mapped_column(String(30))
+    mastery_before: Mapped[float] = mapped_column(Float)
+    mastery_after: Mapped[float] = mapped_column(Float)
+    correct: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class StudyRepository:
@@ -161,6 +177,10 @@ class StudyRepository:
             connect_args={"check_same_thread": False},
         )
         Base.metadata.create_all(self.engine)
+        columns = {column["name"] for column in inspect(self.engine).get_columns("topic_mastery")}
+        if "conversation_updates" not in columns:
+            with self.engine.begin() as connection:
+                connection.execute(text("ALTER TABLE topic_mastery ADD COLUMN conversation_updates INTEGER NOT NULL DEFAULT 0"))
 
     def create_course(self, name: str) -> str:
         course_id = uuid4().hex
@@ -370,6 +390,31 @@ class StudyRepository:
             session.commit()
         return conversation_id
 
+    def record_conversation_learning(self, course_id: str, topics: list[str]) -> None:
+        """Update learner state with a conservative, non-assessment learning signal."""
+        cleaned_topics = list(dict.fromkeys(topic.strip() for topic in topics if topic.strip()))
+        if not cleaned_topics:
+            return
+        with Session(self.engine) as session:
+            for topic in cleaned_topics:
+                mastery = session.get(TopicMasteryRecord, (course_id, topic))
+                if mastery is None:
+                    mastery = TopicMasteryRecord(
+                        course_id=course_id, topic=topic, mastery=0.2,
+                        attempts=0, conversation_updates=0,
+                    )
+                    session.add(mastery)
+                before = mastery.mastery
+                mastery.mastery = update_mastery_from_learning_exposure(before)
+                mastery.conversation_updates += 1
+                mastery.updated_at = utc_now()
+                session.add(MasteryEventRecord(
+                    id=uuid4().hex, course_id=course_id, topic=topic,
+                    signal="grounded_conversation", mastery_before=before,
+                    mastery_after=mastery.mastery, correct=None,
+                ))
+            session.commit()
+
     def list_conversations(self, course_id: str | None = None) -> list[dict[str, object]]:
         with Session(self.engine) as session:
             query = select(ConversationRecord, CourseRecord.name).join(CourseRecord)
@@ -562,9 +607,15 @@ class StudyRepository:
                         course_id=assessment.course_id, topic=question.topic, mastery=0.2, attempts=0,
                     )
                     session.add(mastery)
-                mastery.mastery = update_mastery(mastery.mastery, item.correct)
+                before = mastery.mastery
+                mastery.mastery = update_mastery(before, item.correct)
                 mastery.attempts += 1
                 mastery.updated_at = utc_now()
+                session.add(MasteryEventRecord(
+                    id=uuid4().hex, course_id=assessment.course_id, topic=question.topic,
+                    signal="quiz_answer", mastery_before=before,
+                    mastery_after=mastery.mastery, correct=item.correct,
+                ))
             assessment.status = "completed"
             assessment.score = float(report["percentage"])
             assessment.report_json = json.dumps(report)
@@ -587,7 +638,8 @@ class StudyRepository:
                 .order_by(TopicMasteryRecord.mastery)
             ).all()
             return [
-                {"topic": row.topic, "mastery": row.mastery, "attempts": row.attempts}
+                {"topic": row.topic, "mastery": row.mastery, "attempts": row.attempts,
+                 "conversation_updates": row.conversation_updates}
                 for row in rows
             ]
 
@@ -624,6 +676,11 @@ class StudyRepository:
             material_events = session.scalars(
                 select(MaterialRecord.created_at).where(MaterialRecord.course_id == course_id)
             ).all()
+            mastery_events = session.scalars(
+                select(MasteryEventRecord)
+                .where(MasteryEventRecord.course_id == course_id)
+                .order_by(MasteryEventRecord.created_at, MasteryEventRecord.id)
+            ).all()
         for moment in finished:
             if moment: mark(moment, "assessments")
         for moment in chat_events:
@@ -640,11 +697,30 @@ class StudyRepository:
             }
             for item in weak[:5]
         ]
+        first_by_topic: dict[str, float] = {}
+        latest_by_topic: dict[str, float] = {}
+        mastery_history = []
+        for event in mastery_events:
+            first_by_topic.setdefault(event.topic, event.mastery_before)
+            latest_by_topic[event.topic] = event.mastery_after
+            mastery_history.append({
+                "id": event.id, "topic": event.topic, "signal": event.signal,
+                "before": event.mastery_before, "after": event.mastery_after,
+                "correct": event.correct, "date": event.created_at.isoformat(),
+            })
+        mastery_gain = None
+        if latest_by_topic:
+            mastery_gain = round(sum(
+                latest_by_topic[topic] - first_by_topic[topic] for topic in latest_by_topic
+            ) / len(latest_by_topic) * 100, 1)
         return {
             "completed_assessments": len(completed),
             "average_score": round(sum(scores) / len(scores), 1) if scores else None,
             "answered_questions": sum(int(item["attempts"]) for item in masteries),
+            "tutoring_interactions": sum(int(item["conversation_updates"]) for item in masteries),
             "mastery": masteries,
+            "mastery_history": mastery_history,
+            "mastery_gain": mastery_gain,
             "recent_assessments": completed[:8],
             "score_history": score_history,
             "daily_activity": sorted(daily.values(), key=lambda item: str(item["date"])),

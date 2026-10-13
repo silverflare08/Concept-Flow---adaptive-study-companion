@@ -35,3 +35,12 @@ def test_tutor_prompt_supports_hindi_and_readable_math() -> None:
     prompt = build_tutor_prompt("द्विघात समीकरण समझाओ", [_chunk("x squared is used here")], language="hindi")
     assert "Devanagari" in prompt
     assert "Never output raw LaTeX" in prompt
+
+
+def test_tutor_prompt_uses_learner_history_to_personalise_depth() -> None:
+    prompt = build_tutor_prompt(
+        "Explain 2NF", [_chunk("Second normal form removes partial dependency.")],
+        learner_context="Weak topic: Normalisation 35%. Strong topic: Keys 85%.",
+    )
+    assert "Normalisation 35%" in prompt
+    assert "connect to stronger prior topics" in prompt

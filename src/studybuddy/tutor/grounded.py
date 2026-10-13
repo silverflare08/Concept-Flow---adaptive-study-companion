@@ -41,6 +41,7 @@ class TutorReply:
     citations: list[dict[str, object]]
     follow_up: str
     coverage: str
+    evidence_chunk_ids: list[str]
 
 
 def citation_for_chunk(chunk: KnowledgeChunk) -> dict[str, object]:
@@ -57,7 +58,10 @@ def citation_for_chunk(chunk: KnowledgeChunk) -> dict[str, object]:
     }
 
 
-def build_tutor_prompt(question: str, evidence: Iterable[KnowledgeChunk], language: str = "english") -> str:
+def build_tutor_prompt(
+    question: str, evidence: Iterable[KnowledgeChunk], language: str = "english",
+    learner_context: str = "No learner history is available yet.",
+) -> str:
     """Build a constrained prompt from cited course evidence."""
     passages = []
     for number, chunk in enumerate(evidence, start=1):
@@ -83,6 +87,14 @@ separately.
 Make mathematical expressions human-readable. Prefer Unicode symbols and plainly written equations,
 for example “x² + y² = r²” and “(a + b) / c”. Never output raw LaTeX delimiters such as \\( \\),
 \\[ \\], dollar-sign math blocks, or unexplained backslash commands.
+Use clean Markdown like a short textbook chapter: meaningful headings, short paragraphs,
+labelled definitions, numbered solution steps, and concise bullet lists. Never use repeated
+asterisks, slashes, raw formatting characters, or ASCII art as decoration.
+
+LEARNER MODEL:
+{learner_context}
+Adapt the depth to this history. Re-explain weak topics slowly, connect to stronger prior topics,
+and finish with one check question suited to the learner's current mastery.
 
 COURSE EVIDENCE:
 {context}
@@ -167,6 +179,7 @@ def tutor_answer(
     *,
     generate: Callable[[str], str] = call_ollama,
     language: str = "english",
+    learner_context: str = "No learner history is available yet.",
 ) -> TutorReply:
     """Retrieve evidence and generate a grounded teaching response."""
     results = BM25Index(chunks).search(question, limit=4)
@@ -177,11 +190,13 @@ def tutor_answer(
             citations=[],
             follow_up="Try asking about a topic or phrase that appears in this course.",
             coverage="not_covered",
+            evidence_chunk_ids=[],
         )
-    answer = generate(build_tutor_prompt(question, evidence, language))
+    answer = generate(build_tutor_prompt(question, evidence, language, learner_context))
     return TutorReply(
         answer=answer,
         citations=[citation_for_chunk(chunk) for chunk in evidence],
         follow_up="What part would you like to practise next?",
         coverage="course_backed",
+        evidence_chunk_ids=[chunk.chunk_id for chunk in evidence],
     )
