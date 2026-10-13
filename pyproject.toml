@@ -9,6 +9,7 @@ description = "A multimodal, source-grounded adaptive AI study companion"
 requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2.7",
+  "sqlalchemy>=2.0",
 ]
 
 [project.optional-dependencies]

@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, FileText, FolderPlus, GitBranch, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Upload, X } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, Clock3, FileText, FolderPlus, GitBranch, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Upload, X } from "lucide-react";
 import "./index.css";
 import StudyViews from "./StudyViews.jsx";
 import MaterialsPage from "./MaterialsPage.jsx";
+import HistoryPage from "./HistoryPage.jsx";
+import TutorPage from "./TutorPage.jsx";
+import DashboardPage from "./DashboardPage.jsx";
+import AssessmentPage from "./AssessmentPage.jsx";
+import ProgressPage from "./ProgressPage.jsx";
 
 // In development, Vite forwards /api to FastAPI. This avoids browser-specific
 // localhost restrictions; deployment can override it with VITE_API_URL.
 const API = import.meta.env.VITE_API_URL || "";
-const navItems = [["Home", Home], ["Learn", BookOpen], ["Learning Flow", BookOpen], ["Revision Mind Map", GitBranch], ["Practise", Target], ["Progress", BarChart3], ["Materials", Layers3]];
+const navItems = [["Home", Home], ["Learn", BookOpen], ["Learning Flow", BookOpen], ["Revision Mind Map", GitBranch], ["Practise", Target], ["Progress", BarChart3], ["Materials", Layers3], ["History", Clock3]];
 
 function App() {
   const [page, setPage] = useState("Home");
@@ -19,9 +24,20 @@ function App() {
   const [query, setQuery] = useState("");
   const [tutorState, setTutorState] = useState({ status: "idle", reply: null, message: "" });
   const [notice, setNotice] = useState("");
+  const [library, setLibrary] = useState({ courses: [], conversations: [], artifacts: [], assessments: [] });
+  const [conversationId, setConversationId] = useState(null);
+  const [selectedConversationId, setSelectedConversationId] = useState(null);
+
+  async function refreshLibrary() {
+    const [coursesResponse, historyResponse] = await Promise.all([fetch(`${API}/api/courses`), fetch(`${API}/api/history`)]);
+    if (coursesResponse.ok && historyResponse.ok) {
+      const courses = await coursesResponse.json(); const history = await historyResponse.json();
+      setLibrary({ courses: courses.courses, conversations: history.conversations, artifacts: history.artifacts, assessments: history.assessments || [] });
+    }
+  }
 
   async function refreshWorkspace() {
-    try { const response = await fetch(`${API}/api/workspace`); if (response.ok) { const data = await response.json(); setWorkspace(data); const mapResponse = await fetch(`${API}/api/course-map`); if (mapResponse.ok) setCourseMap((await mapResponse.json()).course_map); setNotice(""); } }
+    try { const response = await fetch(`${API}/api/workspace`); if (response.ok) { const data = await response.json(); setWorkspace(data); const mapResponse = await fetch(`${API}/api/course-map`); if (mapResponse.ok) setCourseMap((await mapResponse.json()).course_map); await refreshLibrary(); setNotice(""); } }
     catch { setNotice("The frontend is running, but the Python API is not connected yet. Start it with uvicorn."); }
   }
   useEffect(() => { refreshWorkspace(); }, []);
@@ -29,31 +45,37 @@ function App() {
   async function createWorkspace(name) {
     const response = await fetch(`${API}/api/workspace`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
     if (!response.ok) throw new Error("Could not create course workspace.");
-    const data = await response.json(); setWorkspace(data); setCourseMap(null); setGuideProgress(null); setNotice(`Created “${data.name}”. Add materials to begin.`); return data;
+    const data = await response.json(); setWorkspace(data); setCourseMap(null); setGuideProgress(null); setConversationId(null); await refreshLibrary(); setNotice(`Created “${data.name}”. Add materials to begin.`); return data;
   }
   async function uploadMaterials(files) {
     const form = new FormData(); Array.from(files).forEach(file => form.append("files", file));
     const response = await fetch(`${API}/api/materials`, { method: "POST", body: form });
     const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Upload failed.");
-    setWorkspace(data.workspace); setCourseMap(null); setNotice(data.reports.map(report => report.message || `${report.name}: ${report.status} (${report.chunks || 0} chunks)`).join(" · "));
+    setWorkspace(data.workspace); setCourseMap(null); await refreshLibrary(); setNotice(data.reports.map(report => report.message || `${report.name}: ${report.status} (${report.chunks || 0} chunks)`).join(" · "));
   }
   async function uploadUrl(url) {
     const response = await fetch(`${API}/api/materials/url`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
     const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Link import failed.");
-    setWorkspace(data.workspace); setCourseMap(null); setNotice(`${data.report.name}: indexed (${data.report.chunks} chunks)`); return data;
+    setWorkspace(data.workspace); setCourseMap(null); await refreshLibrary(); setNotice(`${data.report.name}: indexed (${data.report.chunks} chunks)`); return data;
+  }
+  async function deleteMaterial(sourceId) {
+    const response = await fetch(`${API}/api/materials/${sourceId}`, { method: "DELETE" });
+    const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Could not delete this material.");
+    setWorkspace(data.workspace); setCourseMap(null); setGuideProgress(null); await refreshLibrary();
+    setNotice(`Deleted “${data.deleted.name}” from ${data.workspace.name}.`); return data;
   }
   async function askTutor() {
     if (!query.trim()) return; setTutorState({ status: "loading", reply: null, message: "" });
     try {
-      const response = await fetch(`${API}/api/tutor`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: query }) });
+      const response = await fetch(`${API}/api/tutor`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: query, conversation_id: conversationId }) });
       const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Tutor request failed.");
-      setTutorState({ status: data.coverage === "not_covered" ? "empty" : "ready", reply: data, message: data.coverage === "not_covered" ? data.answer : "" });
+      setConversationId(data.conversation_id); setTutorState({ status: data.coverage === "not_covered" ? "empty" : "ready", reply: data, message: data.coverage === "not_covered" ? data.answer : "" }); await refreshLibrary();
     } catch (error) { setTutorState({ status: "error", reply: null, message: error.message }); }
   }
-  async function generateCourseMap(view) {
+  async function generateCourseMap(view, sourceIds = []) {
     setGuideProgress({ status: "running", view, completed_batches: 0, total_batches: 0 });
     try {
-      const response = await fetch(`${API}/api/study-guide/generate`, { method: "POST" });
+      const response = await fetch(`${API}/api/study-guide/generate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source_ids: sourceIds }) });
       const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Could not prepare your study views.");
       let job = data.job;
       while (job?.status === "running") {
@@ -69,7 +91,7 @@ function App() {
       const mapResponse = await fetch(`${API}/api/course-map`);
       if (!mapResponse.ok) throw new Error("Could not load your study views.");
       const result = await mapResponse.json(); setCourseMap(result.course_map); setGuideProgress({ ...job, view });
-      setWorkspace(current => ({ ...current, course_map_ready: true })); return result.course_map;
+      setWorkspace(current => ({ ...current, course_map_ready: true })); await refreshLibrary(); return result.course_map;
     } catch (error) { setGuideProgress({ status: "failed", view, error: error.message }); throw error; }
   }
   function startTutorFor(conceptName) {
@@ -77,21 +99,31 @@ function App() {
     setQuery(`Teach me ${conceptName} in simple words, using my course material.`);
     setPage("Learn");
   }
+  async function selectCourse(courseId, destination = "Home") {
+    const response = await fetch(`${API}/api/courses/${courseId}/activate`, { method: "POST" });
+    const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Could not open that course.");
+    setWorkspace(data); setConversationId(null); setTutorState({ status: "idle", reply: null, message: "" });
+    const mapResponse = await fetch(`${API}/api/course-map`); if (mapResponse.ok) setCourseMap((await mapResponse.json()).course_map);
+    await refreshLibrary(); setNotice(`Opened “${data.name}”.`); setPage(destination);
+  }
+  function openHistoryConversation(id) { setSelectedConversationId(id); setPage("History"); setSidebarOpen(false); }
+  function newChat() { setConversationId(null); setQuery(""); setTutorState({ status: "idle", reply: null, message: "" }); }
 
   const content = {
-    Home: <Dashboard workspace={workspace} setPage={setPage} notice={notice} />,
-    Learn: <Learn workspace={workspace} query={query} setQuery={setQuery} askTutor={askTutor} state={tutorState} />,
+    Home: <DashboardPage workspace={workspace} setPage={setPage} notice={notice} />,
+    Learn: <TutorPage api={API} workspace={workspace} query={query} setQuery={setQuery} askTutor={askTutor} state={tutorState} conversationId={conversationId} newChat={newChat} />,
     "Learning Flow": <StudyViews mode="learning" workspace={workspace} guide={courseMap} generate={generateCourseMap} progress={guideProgress} setPage={setPage} startTutorFor={startTutorFor} api={API}/>,
     "Revision Mind Map": <StudyViews mode="revision" workspace={workspace} guide={courseMap} generate={generateCourseMap} progress={guideProgress} setPage={setPage} startTutorFor={startTutorFor} api={API}/>,
-    Practise: <Practise workspace={workspace} setPage={setPage} />,
-    Progress: <Progress workspace={workspace} setPage={setPage} />,
-    Materials: <MaterialsPage workspace={workspace} createWorkspace={createWorkspace} uploadMaterials={uploadMaterials} uploadUrl={uploadUrl} notice={notice} />
+    Practise: <AssessmentPage api={API} workspace={workspace} guide={courseMap} refreshLibrary={refreshLibrary} />,
+    Progress: <ProgressPage api={API} workspace={workspace} setPage={setPage} />,
+    Materials: <MaterialsPage api={API} workspace={workspace} courses={library.courses} createWorkspace={createWorkspace} selectCourse={courseId => selectCourse(courseId, "Materials")} uploadMaterials={uploadMaterials} uploadUrl={uploadUrl} deleteMaterial={deleteMaterial} notice={notice} />,
+    History: <HistoryPage api={API} history={{ conversations: library.conversations, artifacts: library.artifacts, assessments: library.assessments || [] }} courses={library.courses} activeCourseId={workspace.id} selectCourse={selectCourse} selectedConversationId={selectedConversationId} onSelectConversation={setSelectedConversationId} />
   };
   return <div className="min-h-screen bg-[radial-gradient(circle_at_88%_7%,#efeaff_0,transparent_25%),radial-gradient(circle_at_8%_88%,#e4f5ee_0,transparent_26%),#f8f7fc]">
     <aside className={`fixed inset-y-0 z-30 w-72 border-r border-white/70 bg-[#f3f0fa]/90 p-5 backdrop-blur-xl transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
       <div className="mb-10 flex items-center justify-between"><Brand/><button onClick={() => setSidebarOpen(false)} className="lg:hidden"><X size={20}/></button></div>
       <p className="eyebrow mb-3 px-3">Workspace</p><nav className="space-y-1">{navItems.map(([label, Icon]) => <button key={label} onClick={() => { setPage(label); setSidebarOpen(false); }} className={`nav-item ${page === label ? "nav-item-active" : ""}`}><Icon size={18}/>{label}</button>)}</nav>
-      <div className="absolute bottom-5 left-5 right-5 rounded-2xl bg-mint p-4"><div className="mb-2 flex items-center gap-2 text-sm font-bold"><Leaf size={16} className="text-emerald-600"/> Gentle reminder</div><p className="text-xs leading-5 text-slate-600">Small, consistent study sessions build lasting understanding.</p></div>
+      <div className="mt-7 border-t border-white/70 pt-5"><p className="eyebrow mb-2 px-3">Recent courses</p><div className="space-y-1">{library.courses.slice(0, 3).map(course => <button key={course.id} onClick={() => selectCourse(course.id)} className={`w-full truncate rounded-xl px-3 py-2 text-left text-sm ${course.id === workspace.id ? "bg-white font-bold text-plum shadow-sm" : "text-slate-600 hover:bg-white/60"}`}>{course.name}</button>)}</div><p className="eyebrow mb-2 mt-5 px-3">Recent chats</p><div className="space-y-1">{library.conversations.slice(0, 3).map(item => <button key={item.id} onClick={() => openHistoryConversation(item.id)} className="w-full truncate rounded-xl px-3 py-2 text-left text-sm text-slate-600 hover:bg-white/60">{item.title}</button>)}</div></div>
     </aside>
     <main className="min-h-screen lg:pl-72"><header className="flex items-center justify-between px-5 py-5 sm:px-9"><button onClick={() => setSidebarOpen(true)} className="rounded-xl bg-white p-2 text-slate-600 shadow-sm lg:hidden"><Menu size={20}/></button><div className="hidden lg:block"/><div className="flex items-center gap-3"><div className="hidden text-right sm:block"><p className="text-sm font-semibold">{workspace.name}</p><p className="text-xs text-slate-500">{workspace.source_count} source{workspace.source_count === 1 ? "" : "s"} indexed</p></div><div className="grid h-10 w-10 place-items-center rounded-full bg-lilac font-bold text-plum">P</div></div></header><section className="mx-auto max-w-7xl px-5 pb-12 sm:px-9">{content[page]}</section></main>
   </div>;

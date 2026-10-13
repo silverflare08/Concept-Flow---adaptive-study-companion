@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 * { box-sizing: border-box; }
-body { margin: 0; background: #f8f7fc; color: #263746; }
+body { margin: 0; background: #f8f7fc; color: #263746; font-size: 15px; line-height: 1.5; }
 button, input { font: inherit; }
 
 @layer components {
@@ -13,4 +13,7 @@ button, input { font: inherit; }
   .eyebrow { @apply text-xs font-bold uppercase tracking-[0.18em] text-plum/70; }
   .primary-button { @apply inline-flex items-center gap-2 rounded-xl bg-plum px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-plum/20 transition hover:-translate-y-0.5 hover:bg-[#564777]; }
   .secondary-button { @apply inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-lavender hover:bg-lilac/40; }
+  .icon-button { @apply grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-plum shadow-sm transition hover:-translate-y-0.5 hover:bg-lilac/50; }
+  .working-card { @apply flex items-center gap-4 rounded-2xl border border-lavender/70 bg-gradient-to-r from-lilac/70 via-white to-mint/50 p-4 shadow-soft; }
+  .working-dot { @apply h-2 w-2 animate-bounce rounded-full bg-plum/70; }
 }

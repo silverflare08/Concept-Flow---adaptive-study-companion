@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 from studybuddy import api
 from studybuddy.course_map import Concept, CourseMap
+from studybuddy.database import StudyRepository
 from studybuddy.ingestion.models import CitationAnchor, KnowledgeChunk, SourceType
 
 
@@ -35,9 +36,43 @@ def test_job_does_not_publish_a_guide_into_a_different_workspace(monkeypatch):
     monkeypatch.setattr(api, "workspace", api.Workspace(revision="new-course"))
     monkeypatch.setattr(api, "generate_course_map", lambda *args, **kwargs: guide())
     job = {"status": "running"}
-    api.run_guide_job(job, "old-course", "Old course", [chunk()])
+    api.run_guide_job(job, "old-course", "old-revision", "Old course", [chunk()], [])
     assert job["status"] == "cancelled"
     assert api.workspace.course_map is None
+
+
+def test_guide_scope_uses_only_selected_material(monkeypatch):
+    first = chunk()
+    second = first.model_copy(update={
+        "chunk_id": "page-20",
+        "citation": first.citation.model_copy(update={"source_id": "slides", "source_name": "Lecture.pptx"}),
+    })
+    monkeypatch.setattr(api, "workspace", api.Workspace(
+        chunks=[first, second],
+        sources=[{"id": "notes", "name": "Biology.pdf"}, {"id": "slides", "name": "Lecture.pptx"}],
+    ))
+    selected = api.selected_guide_chunks(["slides"])
+    assert [item.chunk_id for item in selected] == ["page-20"]
+
+
+def test_delete_material_removes_only_that_source(monkeypatch, tmp_path: Path):
+    repository = StudyRepository(tmp_path / "test.db")
+    course_id = repository.create_course("Biology")
+    source_file = tmp_path / "Biology.pdf"
+    source_file.write_bytes(b"local source")
+    repository.save_material(
+        course_id=course_id, source_id="notes", name="Biology.pdf", kind="pdf",
+        chunks=[chunk()], stored_path=source_file, source_uri="/api/sources/notes",
+    )
+    monkeypatch.setattr(api, "repository", repository)
+    monkeypatch.setattr(api, "workspace", api.workspace_from_record(repository.load_course(course_id)))
+    monkeypatch.setattr(api, "UPLOAD_ROOT", tmp_path / "uploads")
+
+    result = api.delete_material("notes")
+
+    assert result["workspace"]["source_count"] == 0
+    assert repository.load_course(course_id)["chunks"] == []
+    assert not source_file.exists()
 
 
 def test_source_route_rejects_unregistered_paths(monkeypatch):
@@ -70,7 +105,10 @@ def test_uploaded_pdf_link_opens_the_original_document(monkeypatch, tmp_path: Pa
     page[NameObject("/Contents")] = writer._add_object(stream)
     buffer = BytesIO()
     writer.write(buffer)
-    monkeypatch.setattr(api, "workspace", api.Workspace())
+    repository = StudyRepository(tmp_path / "test.db")
+    course_id = repository.create_course("Biology")
+    monkeypatch.setattr(api, "repository", repository)
+    monkeypatch.setattr(api, "workspace", api.workspace_from_record(repository.load_course(course_id)))
     monkeypatch.setattr(api, "UPLOAD_ROOT", tmp_path / "uploads")
     client = TestClient(api.app)
     response = client.post("/api/materials", files={"files": ("Biology.pdf", buffer.getvalue(), "application/pdf")})
@@ -88,7 +126,10 @@ def test_uploaded_text_file_reaches_the_connected_workspace(monkeypatch, tmp_pat
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
 
-    monkeypatch.setattr(api, "workspace", api.Workspace())
+    repository = StudyRepository(tmp_path / "test.db")
+    course_id = repository.create_course("Calculus")
+    monkeypatch.setattr(api, "repository", repository)
+    monkeypatch.setattr(api, "workspace", api.workspace_from_record(repository.load_course(course_id)))
     monkeypatch.setattr(api, "UPLOAD_ROOT", tmp_path / "uploads")
     client = TestClient(api.app)
 
@@ -105,12 +146,15 @@ def test_uploaded_text_file_reaches_the_connected_workspace(monkeypatch, tmp_pat
     assert api.workspace.chunks[0].citation.section == "paragraph 1"
 
 
-def test_web_link_endpoint_indexes_a_fetched_page(monkeypatch):
+def test_web_link_endpoint_indexes_a_fetched_page(monkeypatch, tmp_path: Path):
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
     from studybuddy.ingestion.web import RemoteResource
 
-    monkeypatch.setattr(api, "workspace", api.Workspace())
+    repository = StudyRepository(tmp_path / "test.db")
+    course_id = repository.create_course("Networks")
+    monkeypatch.setattr(api, "repository", repository)
+    monkeypatch.setattr(api, "workspace", api.workspace_from_record(repository.load_course(course_id)))
     monkeypatch.setattr(
         api,
         "fetch_public_resource",

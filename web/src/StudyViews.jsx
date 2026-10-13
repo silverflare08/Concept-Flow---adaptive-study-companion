@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ArrowRight, BookOpen, FileText, GitBranch, RefreshCw } from "lucide-react";
+import WorkingState from "./WorkingState.jsx";
 
 export function SourceReferences({ evidence = [], api = "", compact = false }) {
   return <div className="space-y-2">{evidence.map((source, index) => {
@@ -19,6 +20,7 @@ export default function StudyViews({ mode, workspace, guide, generate, progress,
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedSources, setSelectedSources] = useState([]);
   const mindMap = mode === "revision";
   const anyGenerationRunning = progress?.status === "running";
   const busy = anyGenerationRunning && progress?.view === mode;
@@ -29,13 +31,16 @@ export default function StudyViews({ mode, workspace, guide, generate, progress,
   revisionOrder.forEach(concept => { (groups[concept.topic] ||= []).push(concept); });
   const selected = byId[selectedId];
   const featureName = mindMap ? "Revision Mind Map" : "Learning Flow";
-  async function createGuide() { setError(""); try { await generate(mode); } catch (issue) { setError(issue.message); } }
+  function toggleSource(sourceId) {
+    setSelectedSources(current => current.includes(sourceId) ? current.filter(id => id !== sourceId) : [...current, sourceId]);
+  }
+  async function createGuide() { setError(""); try { await generate(mode, selectedSources); } catch (issue) { setError(issue.message); } }
   return <div className="space-y-6">
-    <div><p className="eyebrow">{mindMap ? "Last-minute revision" : "Your study starting point"}</p><h1 className="mt-2 text-3xl font-extrabold">{mindMap ? "Revision Mind Map" : "Learning Flow"}</h1><p className="mt-3 max-w-3xl leading-6 text-slate-600">{mindMap ? "See your material as topics, concepts and key revision points. Follow the branches to refresh your understanding before an exam." : "Follow a suggested study order. Each step tells you what the topic means, how to study it and exactly where to start reading."}</p></div>
+    <div><p className="eyebrow">{mindMap ? "Last-minute revision" : "Your study starting point"}</p><h1 className="mt-1 text-2xl font-extrabold">{mindMap ? "Revision Mind Map" : "Learning Flow"}</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{mindMap ? "See your selected material as topics, concepts and key revision points. Follow the branches to refresh your understanding before an exam." : "Follow a suggested study order. Each step tells you what the topic means, how to study it and exactly where to start reading."}</p></div>
     <div className="flex flex-wrap gap-3" aria-label="Study view"><button onClick={() => setPage("Learning Flow")} className={mindMap ? "secondary-button" : "primary-button"}><BookOpen size={17}/>Learning Flow</button><button onClick={() => setPage("Revision Mind Map")} className={mindMap ? "primary-button" : "secondary-button"}><GitBranch size={17}/>Revision Mind Map</button></div>
     {!workspace.chunk_count ? <div className="glass-card p-8"><h2 className="text-xl font-bold">Add readable study material first</h2><p className="mt-2 text-slate-600">Upload a PDF or slide deck in Materials to create these study views.</p><button onClick={() => setPage("Materials")} className="primary-button mt-5">Add material<ArrowRight size={16}/></button></div> : <>
-      <div className="glass-card flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{workspace.name}</p><p className="mt-1 text-sm text-slate-600">{guide ? `${concepts.length} concepts · ${Object.keys(groups).length} topics available for this ${mindMap ? "revision map" : "learning route"}.` : mindMap ? "Create a last-minute revision overview from your uploaded material." : "Create a step-by-step learning route from your uploaded material."}</p></div><button disabled={anyGenerationRunning} onClick={createGuide} className="primary-button disabled:opacity-50"><RefreshCw size={16}/>{busy ? `Generating ${featureName}…` : guide ? `Regenerate ${featureName}` : `Generate ${featureName}`}</button></div>
-      {busy && <div className="rounded-2xl bg-lilac/60 p-5" role="status" aria-live="polite"><p className="font-semibold">Generating {featureName}</p><p className="mt-2 text-sm text-slate-600">{progress.total_batches ? `${progress.completed_batches} of ${progress.total_batches} sections processed.` : "Preparing document sections…"} Long documents can take several minutes with a local model.</p>{progress.total_batches > 0 && <progress className="mt-3 w-full accent-plum" value={progress.completed_batches} max={progress.total_batches}/>}</div>}
+      <section className="glass-card p-5"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div className="min-w-0 flex-1"><p className="font-semibold">Choose material for this {mindMap ? "map" : "flow"}</p><p className="mt-1 text-xs text-slate-500">Use the whole workspace, one source, or any combination.</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => setSelectedSources([])} className={`rounded-full px-3 py-1.5 text-xs font-bold ${selectedSources.length === 0 ? "bg-plum text-white" : "bg-slate-100 text-slate-600"}`}>All materials</button>{workspace.sources.map(source => <button key={source.id} onClick={() => toggleSource(source.id)} className={`max-w-full truncate rounded-full px-3 py-1.5 text-xs font-bold ${selectedSources.includes(source.id) ? "bg-mint text-emerald-800 ring-1 ring-emerald-300" : "bg-slate-100 text-slate-600"}`}>{source.name}</button>)}</div>{guide && <p className="mt-3 text-xs text-slate-500">Currently shown: {guide.selected_source_names?.length ? guide.selected_source_names.join(", ") : "all workspace materials"}.</p>}</div><button disabled={anyGenerationRunning} onClick={createGuide} className="primary-button shrink-0 disabled:cursor-wait disabled:opacity-90"><RefreshCw className={busy ? "animate-spin" : ""} size={16}/>{busy ? `Building ${featureName}…` : guide ? `Regenerate ${featureName}` : `Generate ${featureName}`}</button></div></section>
+      {busy && <WorkingState title={`Building your ${featureName}`} detail={progress.total_batches ? `${progress.completed_batches} of ${progress.total_batches} sections processed. The local model is extracting concepts, ordering prerequisites and attaching citations.` : "Preparing the selected material and starting the local AI model. Long sources may take several minutes."} progress={progress.total_batches ? (progress.completed_batches / progress.total_batches) * 100 : null}/>}
       {(error || (progress?.status === "failed" && progress?.view === mode)) && <div role="alert" className="rounded-2xl bg-peach p-4 text-sm text-slate-700">{error || progress.error}</div>}
       {guide && <><p className="text-sm text-slate-500">{guide.coverage?.mapped_chunks} of {guide.coverage?.indexed_chunks} indexed text chunks represented. Generated summaries may still need checking against the cited pages. Scanned text and diagrams are not yet included.</p>
         {mindMap ? <>
