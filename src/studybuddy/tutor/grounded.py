@@ -103,12 +103,12 @@ def call_ollama_json(prompt: str) -> str:
             "stream": False,
             "format": "json",
             "messages": [{"role": "user", "content": prompt}],
-            "options": {"temperature": 0.1, "num_ctx": 8192},
+            "options": {"temperature": 0.1, "num_ctx": 8192, "num_predict": 2400},
         }
     ).encode("utf-8")
     request = Request(endpoint, data=payload, headers={"Content-Type": "application/json"}, method="POST")
     try:
-        with urlopen(request, timeout=120) as response:  # nosec B310 - local configurable endpoint
+        with urlopen(request, timeout=180) as response:  # nosec B310 - local configurable endpoint
             body = json.loads(response.read().decode("utf-8"))
     except URLError as error:
         raise RuntimeError("Local tutor model is unavailable. Start Ollama and try again.") from error

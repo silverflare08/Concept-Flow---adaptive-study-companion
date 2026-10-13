@@ -28,7 +28,7 @@ from studybuddy.assessment import (
     grade_short_answer,
 )
 from studybuddy.ingestion.chunker import chunk_segments
-from studybuddy.ingestion.models import KnowledgeChunk
+from studybuddy.ingestion.models import EvidenceKind, KnowledgeChunk
 from studybuddy.ingestion.router import SUPPORTED_FILE_TYPES, parse_study_file
 from studybuddy.ingestion.video import transcribe_video
 from studybuddy.ingestion.web import fetch_public_resource, ingest_web_page, is_youtube_url
@@ -50,6 +50,7 @@ class Workspace:
     revision: str = field(default_factory=lambda: uuid4().hex)
     guide_job: dict[str, object] | None = None
     guide_source_ids: list[str] = field(default_factory=list)
+    guide_evidence: dict[str, KnowledgeChunk] = field(default_factory=dict)
 
 
 repository = StudyRepository()
@@ -178,6 +179,7 @@ def selected_guide_chunks(source_ids: list[str]) -> list[KnowledgeChunk]:
 def course_map_view(course_map: CourseMap) -> dict[str, object]:
     """Enrich a map with human-readable evidence and a useful learning route."""
     chunks_by_id = {chunk.chunk_id: chunk for chunk in workspace.chunks}
+    chunks_by_id.update(workspace.guide_evidence)
     order = course_map.learning_order()
     concepts = []
     for concept_id in order:
@@ -310,6 +312,39 @@ def activate_course(course_id: str) -> dict[str, object]:
     return workspace_summary()
 
 
+def remove_registered_source_files(files: list[tuple[str, Path]]) -> None:
+    for source_id, stored_path in files:
+        if stored_path.is_file():
+            stored_path.unlink()
+        image_dir = UPLOAD_ROOT / "images" / source_id
+        if image_dir.is_dir():
+            for child in image_dir.iterdir():
+                if child.is_file():
+                    child.unlink()
+            image_dir.rmdir()
+
+
+@app.delete("/api/courses/{course_id}")
+def delete_course(course_id: str) -> dict[str, object]:
+    """Permanently remove one workspace and activate a safe remaining workspace."""
+    global workspace
+    deleting_active = workspace.course_id == course_id
+    try:
+        files = repository.delete_course(course_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    remove_registered_source_files(files)
+    if deleting_active:
+        next_course_id = repository.latest_course_id()
+        if next_course_id is None:
+            next_course_id = repository.create_course("My study space")
+        record = repository.load_course(next_course_id)
+        if record is None:
+            raise HTTPException(status_code=500, detail="Could not activate a remaining workspace.")
+        workspace = workspace_from_record(record)
+    return {"workspace": workspace_summary(), "courses": repository.list_courses()}
+
+
 @app.post("/api/materials")
 async def upload_materials(files: list[UploadFile] = File(...)) -> dict[str, object]:
     """Save and parse arbitrary study documents into the active workspace."""
@@ -418,14 +453,7 @@ def delete_material(source_id: str) -> dict[str, object]:
         stored_path = repository.delete_material(workspace.course_id, source_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
-    if stored_path and stored_path.is_file():
-        stored_path.unlink()
-    image_dir = UPLOAD_ROOT / "images" / source_id
-    if image_dir.is_dir():
-        for child in image_dir.iterdir():
-            if child.is_file():
-                child.unlink()
-        image_dir.rmdir()
+    remove_registered_source_files([(source_id, stored_path)] if stored_path else [])
     workspace.sources = [item for item in workspace.sources if item["id"] != source_id]
     workspace.chunks = [chunk for chunk in workspace.chunks if chunk.citation.source_id != source_id]
     workspace.source_files.pop(source_id, None)
@@ -434,6 +462,45 @@ def delete_material(source_id: str) -> dict[str, object]:
     workspace.revision = uuid4().hex
     workspace.guide_job = None
     return {"deleted": {"id": source_id, "name": source["name"]}, "workspace": workspace_summary()}
+
+
+def compact_transcript_chunks(
+    chunks: list[KnowledgeChunk], *, max_characters: int = 1800,
+) -> list[KnowledgeChunk]:
+    """Merge tiny adjacent transcript chunks for fast map extraction, preserving time ranges."""
+    output: list[KnowledgeChunk] = []
+    group: list[KnowledgeChunk] = []
+
+    def flush() -> None:
+        nonlocal group
+        if not group:
+            return
+        if len(group) == 1:
+            output.append(group[0])
+        else:
+            first, last = group[0], group[-1]
+            citation = first.citation.model_copy(update={"end_seconds": last.citation.end_seconds})
+            output.append(first.model_copy(update={
+                "text": " ".join(item.text for item in group),
+                "token_count": sum(item.token_count for item in group),
+                "citation": citation,
+            }))
+        group = []
+
+    for chunk in chunks:
+        is_transcript = chunk.evidence_kind is EvidenceKind.TRANSCRIPT
+        same_source = group and group[-1].citation.source_id == chunk.citation.source_id
+        projected = sum(len(item.text) for item in group) + len(chunk.text) + len(group)
+        if not is_transcript:
+            flush()
+            output.append(chunk)
+        elif group and (not same_source or projected > max_characters):
+            flush()
+            group = [chunk]
+        else:
+            group.append(chunk)
+    flush()
+    return output
 
 
 def run_guide_job(
@@ -449,6 +516,7 @@ def run_guide_job(
             return
         workspace.course_map = generated
         workspace.guide_source_ids = source_ids
+        workspace.guide_evidence = {chunk.chunk_id: chunk for chunk in chunks}
         artifact_id = repository.save_course_map(course_id, generated)
         job.update(status="complete", artifact_id=artifact_id)
     except Exception as error:
@@ -466,14 +534,16 @@ def start_study_guide(request: GuideRequest | None = None) -> dict[str, object]:
         chunks = selected_guide_chunks(source_ids)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
+    compacted_chunks = compact_transcript_chunks(chunks)
     job: dict[str, object] = {
         "job_id": uuid4().hex, "status": "running", "completed_batches": 0,
-        "total_batches": 0, "source_ids": source_ids,
+        "total_batches": 0, "source_ids": source_ids, "source_chunks": len(chunks),
+        "analysis_chunks": len(compacted_chunks),
     }
     workspace.guide_job = job
     guide_executor.submit(
         run_guide_job, job, workspace.course_id, workspace.revision,
-        workspace.name, chunks, source_ids,
+        workspace.name, compacted_chunks, source_ids,
     )
     return {"job": dict(job)}
 
@@ -494,13 +564,14 @@ def create_course_map(request: GuideRequest | None = None) -> dict[str, object]:
     """Generate a source-linked concept/prerequisite map from active material."""
     try:
         source_ids = list(dict.fromkeys(request.source_ids if request else []))
-        chunks = selected_guide_chunks(source_ids)
+        chunks = compact_transcript_chunks(selected_guide_chunks(source_ids))
         workspace.course_map = generate_course_map(
             workspace.name,
             chunks,
             generate_json=call_ollama_json,
         )
         workspace.guide_source_ids = source_ids
+        workspace.guide_evidence = {chunk.chunk_id: chunk for chunk in chunks}
         repository.save_course_map(workspace.course_id, workspace.course_map)
     except (RuntimeError, ValueError) as error:
         raise HTTPException(status_code=503, detail=str(error)) from error

@@ -272,6 +272,40 @@ class StudyRepository:
             session.commit()
         return stored_path
 
+    def delete_course(self, course_id: str) -> list[tuple[str, Path]]:
+        """Delete one complete workspace and return its registered source files."""
+        with Session(self.engine) as session:
+            course = session.get(CourseRecord, course_id)
+            if course is None:
+                raise ValueError("Course workspace not found.")
+            materials = session.scalars(
+                select(MaterialRecord).where(MaterialRecord.course_id == course_id)
+            ).all()
+            stored_files = [
+                (material.id, Path(material.stored_path))
+                for material in materials if material.stored_path
+            ]
+            conversation_ids = session.scalars(
+                select(ConversationRecord.id).where(ConversationRecord.course_id == course_id)
+            ).all()
+            assessment_ids = session.scalars(
+                select(AssessmentRecord.id).where(AssessmentRecord.course_id == course_id)
+            ).all()
+            if conversation_ids:
+                session.execute(delete(MessageRecord).where(MessageRecord.conversation_id.in_(conversation_ids)))
+            if assessment_ids:
+                session.execute(delete(StudentAnswerRecord).where(StudentAnswerRecord.assessment_id.in_(assessment_ids)))
+                session.execute(delete(AssessmentQuestionRecord).where(AssessmentQuestionRecord.assessment_id.in_(assessment_ids)))
+            session.execute(delete(AssessmentRecord).where(AssessmentRecord.course_id == course_id))
+            session.execute(delete(TopicMasteryRecord).where(TopicMasteryRecord.course_id == course_id))
+            session.execute(delete(ArtifactRecord).where(ArtifactRecord.course_id == course_id))
+            session.execute(delete(ConversationRecord).where(ConversationRecord.course_id == course_id))
+            session.execute(delete(ChunkRecord).where(ChunkRecord.course_id == course_id))
+            session.execute(delete(MaterialRecord).where(MaterialRecord.course_id == course_id))
+            session.delete(course)
+            session.commit()
+        return stored_files
+
     def save_course_map(self, course_id: str, course_map: CourseMap) -> str:
         artifact_id = uuid4().hex
         with Session(self.engine) as session:
