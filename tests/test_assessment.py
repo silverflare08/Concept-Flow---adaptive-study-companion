@@ -7,6 +7,7 @@ from studybuddy.assessment import (
     generate_assessment,
     grade_objective,
     grade_short_answer,
+    humanize_math_text,
     parse_assessment_draft,
     question_fingerprint,
     question_similarity,
@@ -23,6 +24,10 @@ def chunk() -> KnowledgeChunk:
             source_id="notes", source_name="ML notes.pdf", source_type=SourceType.PDF, page=8,
         ),
     )
+
+
+def test_raw_latex_is_converted_to_readable_math() -> None:
+    assert humanize_math_text(r"\(\frac{a}{b} \times \pi\)") == "(a) ÷ (b) × π"
 
 
 def mcq_payload(prompt: str = "Which direction does gradient descent use?") -> dict:

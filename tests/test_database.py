@@ -157,3 +157,6 @@ def test_assessment_answers_report_and_mastery_are_persistent(tmp_path: Path) ->
     assert progress["completed_assessments"] == 1
     assert progress["average_score"] == 100
     assert progress["answered_questions"] == 1
+    assert progress["score_history"][0]["score"] == 100
+    assert progress["daily_activity"][0]["assessments"] == 1
+    assert progress["revision_plan"][0]["topic"] == "Gradient descent"

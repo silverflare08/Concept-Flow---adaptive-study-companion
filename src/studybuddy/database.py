@@ -505,6 +505,7 @@ class StudyRepository:
                 "questions": [AssessmentQuestion.model_validate_json(row.payload_json) for row in questions],
                 "answers": [json.loads(row.feedback_json) for row in answers],
                 "created_at": assessment.created_at.isoformat(),
+                "completed_at": assessment.completed_at.isoformat() if assessment.completed_at else None,
             }
 
     def list_assessments(self, course_id: str | None = None) -> list[dict[str, object]]:
@@ -522,6 +523,7 @@ class StudyRepository:
                     "status": assessment.status,
                     "score": assessment.score,
                     "created_at": assessment.created_at.isoformat(),
+                    "completed_at": assessment.completed_at.isoformat() if assessment.completed_at else None,
                 }
                 for assessment, course_name in rows
             ]
@@ -594,10 +596,59 @@ class StudyRepository:
         completed = [item for item in assessments if item["status"] == "completed"]
         scores = [float(item["score"]) for item in completed if item["score"] is not None]
         masteries = self.topic_masteries(course_id)
+        score_history = [
+            {
+                "id": item["id"], "title": item["title"], "score": float(item["score"]),
+                "date": item["completed_at"] or item["created_at"],
+            }
+            for item in reversed(completed) if item["score"] is not None
+        ]
+        daily: dict[str, dict[str, object]] = {}
+
+        def mark(moment: datetime, kind: str) -> None:
+            day = moment.date().isoformat()
+            entry = daily.setdefault(day, {"date": day, "assessments": 0, "chats": 0, "materials": 0, "total": 0})
+            entry[kind] = int(entry[kind]) + 1
+            entry["total"] = int(entry["total"]) + 1
+
+        with Session(self.engine) as session:
+            finished = session.scalars(
+                select(AssessmentRecord.completed_at)
+                .where(AssessmentRecord.course_id == course_id, AssessmentRecord.completed_at.is_not(None))
+            ).all()
+            chat_events = session.scalars(
+                select(MessageRecord.created_at)
+                .join(ConversationRecord, MessageRecord.conversation_id == ConversationRecord.id)
+                .where(ConversationRecord.course_id == course_id, MessageRecord.role == "user")
+            ).all()
+            material_events = session.scalars(
+                select(MaterialRecord.created_at).where(MaterialRecord.course_id == course_id)
+            ).all()
+        for moment in finished:
+            if moment: mark(moment, "assessments")
+        for moment in chat_events:
+            mark(moment, "chats")
+        for moment in material_events:
+            mark(moment, "materials")
+
+        weak = [item for item in masteries if float(item["mastery"]) < 0.7]
+        revision_plan = [
+            {
+                "topic": item["topic"], "mastery": item["mastery"],
+                "action": "Review the cited explanation, make five flashcards, then take a focused 5-question quiz.",
+                "priority": "urgent" if float(item["mastery"]) < 0.45 else "review",
+            }
+            for item in weak[:5]
+        ]
         return {
             "completed_assessments": len(completed),
             "average_score": round(sum(scores) / len(scores), 1) if scores else None,
             "answered_questions": sum(int(item["attempts"]) for item in masteries),
             "mastery": masteries,
             "recent_assessments": completed[:8],
+            "score_history": score_history,
+            "daily_activity": sorted(daily.values(), key=lambda item: str(item["date"])),
+            "weak_topics": [item["topic"] for item in weak],
+            "revision_plan": revision_plan,
+            "score_change": round(score_history[-1]["score"] - score_history[0]["score"], 1) if len(score_history) > 1 else None,
         }

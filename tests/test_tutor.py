@@ -29,3 +29,9 @@ def test_tutor_prompt_contains_the_question_evidence_and_grounding_rule() -> Non
     assert "What is 2NF?" in prompt
     assert "DBMS notes, PDF page 14" in prompt
     assert "closed book" in prompt
+
+
+def test_tutor_prompt_supports_hindi_and_readable_math() -> None:
+    prompt = build_tutor_prompt("द्विघात समीकरण समझाओ", [_chunk("x squared is used here")], language="hindi")
+    assert "Devanagari" in prompt
+    assert "Never output raw LaTeX" in prompt

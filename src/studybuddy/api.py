@@ -27,6 +27,7 @@ from studybuddy.assessment import (
     generate_assessment,
     grade_objective,
     grade_short_answer,
+    humanize_math_text,
 )
 from studybuddy.ingestion.chunker import chunk_segments
 from studybuddy.ingestion.models import EvidenceKind, KnowledgeChunk
@@ -127,6 +128,7 @@ class AssessmentCreateRequest(BaseModel):
     question_count: int = Field(default=5, ge=1, le=12)
     difficulty: Literal["easy", "medium", "hard"] = "medium"
     question_types: list[Literal["mcq", "short_answer", "numerical", "true_false", "fill_blank"]] = Field(min_length=1)
+    language: Literal["english", "hindi", "hinglish"] = "english"
 
 
 class AssessmentSubmitRequest(BaseModel):
@@ -261,10 +263,10 @@ def assessment_view(record: dict[str, object]) -> dict[str, object]:
         public = {
             "question_id": question.question_id,
             "question_type": question.question_type,
-            "prompt": question.prompt,
+            "prompt": humanize_math_text(question.prompt),
             "topic": question.topic,
             "difficulty": question.difficulty,
-            "options": question.options,
+            "options": [humanize_math_text(option) for option in question.options],
             "evidence": [
                 {
                     "label": chunks_by_id[chunk_id].citation.label(),
@@ -280,7 +282,7 @@ def assessment_view(record: dict[str, object]) -> dict[str, object]:
             ],
         }
         if completed:
-            public.update(correct_answer=question.correct_answer, explanation=question.explanation)
+            public.update(correct_answer=humanize_math_text(question.correct_answer), explanation=humanize_math_text(question.explanation))
         questions.append(public)
     return {
         "id": record["id"],
@@ -293,6 +295,7 @@ def assessment_view(record: dict[str, object]) -> dict[str, object]:
         "questions": questions,
         "answers": record["answers"] if completed else [],
         "created_at": record["created_at"],
+        "completed_at": record.get("completed_at"),
     }
 
 
@@ -751,6 +754,7 @@ def create_assessment(request: AssessmentCreateRequest) -> dict[str, object]:
             previous_prompts=repository.previous_question_prompts(workspace.course_id),
             generate_json=call_ollama_json,
             verify_json=call_ollama_json,
+            language=request.language,
         )
         assessment_id = repository.save_assessment(
             workspace.course_id,
@@ -833,6 +837,7 @@ def submit_assessment(assessment_id: str, request: AssessmentSubmitRequest) -> d
                     response,
                     chunks_by_id,
                     grade_json=call_ollama_json,
+                    language=str(record["config"].get("language", "english")),
                 )
             else:
                 result = grade_objective(question, response)

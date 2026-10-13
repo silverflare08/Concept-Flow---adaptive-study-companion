@@ -37,3 +37,9 @@ def test_overview_falls_back_to_a_cited_source_lesson_when_model_is_offline() ->
     assert result["generation_mode"] == "extractive_fallback"
     assert "Photosynthesis converts light energy" in result["answer"]
     assert "Biology.pdf, PDF page 7" in result["answer"]
+
+
+def test_overview_prompt_can_request_hinglish() -> None:
+    prompt = build_overview_prompt("Biology", [material_chunk()], 1, 1, language="hinglish")
+    assert "conversational Hinglish" in prompt
+    assert "raw LaTeX" in prompt
