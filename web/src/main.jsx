@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, Clock3, FileText, FolderPlus, GitBranch, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Upload, X } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, Clock3, FileText, FolderPlus, GitBranch, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Trash2, Upload, X } from "lucide-react";
 import "./index.css";
 import StudyViews from "./StudyViews.jsx";
 import MaterialsPage from "./MaterialsPage.jsx";
@@ -9,6 +9,7 @@ import TutorPage from "./TutorPage.jsx";
 import DashboardPage from "./DashboardPage.jsx";
 import AssessmentPage from "./AssessmentPage.jsx";
 import ProgressPage from "./ProgressPage.jsx";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 
 // In development, Vite forwards /api to FastAPI. This avoids browser-specific
 // localhost restrictions; deployment can override it with VITE_API_URL.
@@ -27,6 +28,8 @@ function App() {
   const [library, setLibrary] = useState({ courses: [], conversations: [], artifacts: [], assessments: [] });
   const [conversationId, setConversationId] = useState(null);
   const [selectedConversationId, setSelectedConversationId] = useState(null);
+  const [pendingWorkspaceDelete, setPendingWorkspaceDelete] = useState(null);
+  const [deletingWorkspace, setDeletingWorkspace] = useState(false);
 
   async function refreshLibrary() {
     const [coursesResponse, historyResponse] = await Promise.all([fetch(`${API}/api/courses`), fetch(`${API}/api/history`)]);
@@ -60,9 +63,23 @@ function App() {
   }
   async function deleteMaterial(sourceId) {
     const response = await fetch(`${API}/api/materials/${sourceId}`, { method: "DELETE" });
-    const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Could not delete this material.");
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(response.status === 405 ? "The backend is still running an older version. Restart uvicorn, then delete the material again." : data.detail || "Could not delete this material.");
     setWorkspace(data.workspace); setCourseMap(null); setGuideProgress(null); await refreshLibrary();
     setNotice(`Deleted “${data.deleted.name}” from ${data.workspace.name}.`); return data;
+  }
+  async function deleteWorkspace(course) {
+    setDeletingWorkspace(true);
+    try {
+      const response = await fetch(`${API}/api/courses/${course.id}`, { method: "DELETE" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(response.status === 405 ? "The backend is still running an older version. Restart uvicorn, then delete the workspace again." : data.detail || "Could not delete this workspace.");
+      setWorkspace(data.workspace); setConversationId(null); setTutorState({ status: "idle", reply: null, message: "" });
+      const mapResponse = await fetch(`${API}/api/course-map`); setCourseMap(mapResponse.ok ? (await mapResponse.json()).course_map : null);
+      setGuideProgress(null); await refreshLibrary(); setPage("Home");
+      setNotice(`Deleted workspace “${course.name}”.`);
+    } catch (error) { setNotice(error.message); }
+    finally { setDeletingWorkspace(false); setPendingWorkspaceDelete(null); }
   }
   async function askTutor() {
     if (!query.trim()) return; setTutorState({ status: "loading", reply: null, message: "" });
@@ -123,9 +140,10 @@ function App() {
     <aside className={`fixed inset-y-0 z-30 w-72 border-r border-white/70 bg-[#f3f0fa]/90 p-5 backdrop-blur-xl transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
       <div className="mb-10 flex items-center justify-between"><Brand/><button onClick={() => setSidebarOpen(false)} className="lg:hidden"><X size={20}/></button></div>
       <p className="eyebrow mb-3 px-3">Workspace</p><nav className="space-y-1">{navItems.map(([label, Icon]) => <button key={label} onClick={() => { setPage(label); setSidebarOpen(false); }} className={`nav-item ${page === label ? "nav-item-active" : ""}`}><Icon size={18}/>{label}</button>)}</nav>
-      <div className="mt-7 border-t border-white/70 pt-5"><p className="eyebrow mb-2 px-3">Recent courses</p><div className="space-y-1">{library.courses.slice(0, 3).map(course => <button key={course.id} onClick={() => selectCourse(course.id)} className={`w-full truncate rounded-xl px-3 py-2 text-left text-sm ${course.id === workspace.id ? "bg-white font-bold text-plum shadow-sm" : "text-slate-600 hover:bg-white/60"}`}>{course.name}</button>)}</div><p className="eyebrow mb-2 mt-5 px-3">Recent chats</p><div className="space-y-1">{library.conversations.slice(0, 3).map(item => <button key={item.id} onClick={() => openHistoryConversation(item.id)} className="w-full truncate rounded-xl px-3 py-2 text-left text-sm text-slate-600 hover:bg-white/60">{item.title}</button>)}</div></div>
+      <div className="mt-7 border-t border-white/70 pt-5"><p className="eyebrow mb-2 px-3">Recent courses</p><div className="space-y-1">{library.courses.slice(0, 4).map(course => <div key={course.id} className={`group flex items-center rounded-xl ${course.id === workspace.id ? "bg-white shadow-sm" : "hover:bg-white/60"}`}><button onClick={() => selectCourse(course.id)} className={`min-w-0 flex-1 truncate px-3 py-2 text-left text-sm ${course.id === workspace.id ? "font-bold text-plum" : "text-slate-600"}`}>{course.name}</button><button onClick={() => setPendingWorkspaceDelete(course)} title={`Delete workspace ${course.name}`} className="mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 opacity-70 transition hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"><Trash2 size={15}/></button></div>)}</div><p className="eyebrow mb-2 mt-5 px-3">Recent chats</p><div className="space-y-1">{library.conversations.slice(0, 3).map(item => <button key={item.id} onClick={() => openHistoryConversation(item.id)} className="w-full truncate rounded-xl px-3 py-2 text-left text-sm text-slate-600 hover:bg-white/60">{item.title}</button>)}</div></div>
     </aside>
     <main className="min-h-screen lg:pl-72"><header className="flex items-center justify-between px-5 py-5 sm:px-9"><button onClick={() => setSidebarOpen(true)} className="rounded-xl bg-white p-2 text-slate-600 shadow-sm lg:hidden"><Menu size={20}/></button><div className="hidden lg:block"/><div className="flex items-center gap-3"><div className="hidden text-right sm:block"><p className="text-sm font-semibold">{workspace.name}</p><p className="text-xs text-slate-500">{workspace.source_count} source{workspace.source_count === 1 ? "" : "s"} indexed</p></div><div className="grid h-10 w-10 place-items-center rounded-full bg-lilac font-bold text-plum">P</div></div></header><section className="mx-auto max-w-7xl px-5 pb-12 sm:px-9">{content[page]}</section></main>
+    <ConfirmDialog open={!!pendingWorkspaceDelete} title="Delete this entire workspace?" body={pendingWorkspaceDelete ? `“${pendingWorkspaceDelete.name}” will be permanently deleted with its uploaded materials, chats, generated maps, assessments and progress. This cannot be undone.` : ""} confirmLabel="Delete workspace" busy={deletingWorkspace} onCancel={() => setPendingWorkspaceDelete(null)} onConfirm={() => deleteWorkspace(pendingWorkspaceDelete)}/>
   </div>;
 }
 

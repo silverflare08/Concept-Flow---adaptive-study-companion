@@ -85,7 +85,7 @@ def call_ollama(prompt: str) -> str:
     try:
         with urlopen(request, timeout=120) as response:  # nosec B310 - local configurable endpoint
             body = json.loads(response.read().decode("utf-8"))
-    except URLError as error:
+    except (URLError, TimeoutError) as error:
         raise RuntimeError("Local tutor model is unavailable. Start Ollama and try again.") from error
     answer = body.get("message", {}).get("content", "").strip()
     if not answer:
@@ -110,8 +110,8 @@ def call_ollama_json(prompt: str) -> str:
     try:
         with urlopen(request, timeout=180) as response:  # nosec B310 - local configurable endpoint
             body = json.loads(response.read().decode("utf-8"))
-    except URLError as error:
-        raise RuntimeError("Local tutor model is unavailable. Start Ollama and try again.") from error
+    except (URLError, TimeoutError) as error:
+        raise RuntimeError("The local model did not finish in time. Try fewer sources or restart Ollama.") from error
     answer = body.get("message", {}).get("content", "").strip()
     if not answer:
         raise RuntimeError("The local tutor model returned an empty map draft.")

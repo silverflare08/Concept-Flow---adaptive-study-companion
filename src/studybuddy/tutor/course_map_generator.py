@@ -7,14 +7,14 @@ import re
 from collections.abc import Callable
 
 from studybuddy.course_map import Concept, CourseMap, PrerequisiteEdge
-from studybuddy.ingestion.models import KnowledgeChunk
+from studybuddy.ingestion.models import EvidenceKind, KnowledgeChunk
 
 
 def course_id_from_title(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:80] or "course"
 
 
-def batch_chunks(chunks: list[KnowledgeChunk], max_characters: int = 9000) -> list[list[KnowledgeChunk]]:
+def batch_chunks(chunks: list[KnowledgeChunk], max_characters: int = 14000) -> list[list[KnowledgeChunk]]:
     """Keep every chunk in document order without truncating its text."""
     batches: list[list[KnowledgeChunk]] = []
     current: list[KnowledgeChunk] = []
@@ -172,6 +172,11 @@ def generate_course_map(
                     "Read the cited material and identify its main idea.",
                     "Explain the idea in your own words before continuing.",
                 ]
+        covered = {cid for concept in draft.concepts for cid in concept.evidence_chunk_ids}
+        used_ids = {concept.concept_id for concept in draft.concepts}
+        for chunk in batch:
+            if chunk.chunk_id not in covered and chunk.evidence_kind is not EvidenceKind.TRANSCRIPT:
+                draft.concepts.append(source_summary_concept(chunk, used_ids))
         remapped = {}
         for concept in draft.concepts:
             identity = (concept.topic.casefold().strip(), concept.name.casefold().strip())

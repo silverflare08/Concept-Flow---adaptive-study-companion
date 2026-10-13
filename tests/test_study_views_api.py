@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from studybuddy import api
 from studybuddy.course_map import Concept, CourseMap
 from studybuddy.database import StudyRepository
-from studybuddy.ingestion.models import CitationAnchor, KnowledgeChunk, SourceType
+from studybuddy.ingestion.models import CitationAnchor, EvidenceKind, KnowledgeChunk, SourceType
 
 
 def chunk():
@@ -56,6 +56,8 @@ def test_guide_scope_uses_only_selected_material(monkeypatch):
 
 
 def test_delete_material_removes_only_that_source(monkeypatch, tmp_path: Path):
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
     repository = StudyRepository(tmp_path / "test.db")
     course_id = repository.create_course("Biology")
     source_file = tmp_path / "Biology.pdf"
@@ -68,11 +70,45 @@ def test_delete_material_removes_only_that_source(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(api, "workspace", api.workspace_from_record(repository.load_course(course_id)))
     monkeypatch.setattr(api, "UPLOAD_ROOT", tmp_path / "uploads")
 
-    result = api.delete_material("notes")
+    response = TestClient(api.app).delete("/api/materials/notes")
 
-    assert result["workspace"]["source_count"] == 0
+    assert response.status_code == 200
+    assert response.json()["workspace"]["source_count"] == 0
     assert repository.load_course(course_id)["chunks"] == []
     assert not source_file.exists()
+
+
+def test_delete_active_workspace_activates_a_remaining_course(monkeypatch, tmp_path: Path):
+    repository = StudyRepository(tmp_path / "test.db")
+    kept_id = repository.create_course("Keep me")
+    deleted_id = repository.create_course("Delete me")
+    monkeypatch.setattr(api, "repository", repository)
+    monkeypatch.setattr(api, "workspace", api.workspace_from_record(repository.load_course(deleted_id)))
+    monkeypatch.setattr(api, "UPLOAD_ROOT", tmp_path / "uploads")
+
+    result = api.delete_course(deleted_id)
+
+    assert repository.load_course(deleted_id) is None
+    assert result["workspace"]["id"] == kept_id
+    assert result["workspace"]["name"] == "Keep me"
+
+
+def test_transcript_chunks_are_compacted_for_fast_map_generation():
+    chunks = [KnowledgeChunk(
+        chunk_id=f"video-{index}", text=("concept explanation " * 12).strip(), token_count=24,
+        evidence_kind=EvidenceKind.TRANSCRIPT,
+        citation=CitationAnchor(
+            source_id="video", source_name="Lecture", source_type=SourceType.VIDEO,
+            start_seconds=index * 5, end_seconds=(index + 1) * 5,
+        ),
+    ) for index in range(20)]
+
+    compacted = api.compact_transcript_chunks(chunks, max_characters=1000)
+
+    assert len(compacted) <= len(chunks) / 4
+    assert sum(item.token_count for item in compacted) == sum(item.token_count for item in chunks)
+    assert compacted[0].citation.start_seconds == 0
+    assert compacted[-1].citation.end_seconds == 100
 
 
 def test_source_route_rejects_unregistered_paths(monkeypatch):

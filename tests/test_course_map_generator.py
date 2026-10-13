@@ -115,7 +115,7 @@ def test_full_generation_reads_the_final_section_and_merges_duplicate_concepts()
 
 
 def test_reconciles_prerequisites_between_separate_document_sections() -> None:
-    chunks = [_chunk("foundation", "content " * 700), _chunk("advanced", "content " * 700)]
+    chunks = [_chunk("foundation", "content " * 1100), _chunk("advanced", "content " * 1100)]
     def generate(prompt):
         if "CONCEPTS:" in prompt:
             return json.dumps({"prerequisite_edges": [{"prerequisite_id": "section-1-foundation", "dependent_id": "section-2-advanced"}]})

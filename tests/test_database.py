@@ -87,6 +87,24 @@ def test_chat_and_generated_artifact_are_persistent_and_downloadable(tmp_path: P
     assert artifact["content"]["title"] == "Linear Algebra"
 
 
+def test_deleting_course_removes_its_records_but_not_other_courses(tmp_path: Path) -> None:
+    repository = StudyRepository(tmp_path / "conceptflow.db")
+    deleted_id = repository.create_course("Delete me")
+    kept_id = repository.create_course("Keep me")
+    source_file = tmp_path / "notes.txt"
+    source_file.write_text("notes", encoding="utf-8")
+    repository.save_material(
+        course_id=deleted_id, source_id="source-1", name="notes.txt", kind="document",
+        chunks=[sample_chunk()], stored_path=source_file, source_uri=None,
+    )
+
+    files = repository.delete_course(deleted_id)
+
+    assert files == [("source-1", source_file)]
+    assert repository.load_course(deleted_id) is None
+    assert repository.load_course(kept_id)["name"] == "Keep me"
+
+
 def test_assessment_answers_report_and_mastery_are_persistent(tmp_path: Path) -> None:
     repository = StudyRepository(tmp_path / "conceptflow.db")
     course_id = repository.create_course("Machine Learning")
