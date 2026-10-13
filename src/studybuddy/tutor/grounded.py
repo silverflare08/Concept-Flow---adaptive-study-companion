@@ -37,6 +37,8 @@ def _citation(chunk: KnowledgeChunk) -> dict[str, object]:
         "page": chunk.citation.page,
         "slide": chunk.citation.slide,
         "start_seconds": chunk.citation.start_seconds,
+        "section": chunk.citation.section,
+        "evidence_kind": chunk.evidence_kind.value,
         "target_uri": chunk.citation.target_uri(),
         "excerpt": chunk.text[:280].strip(),
     }

@@ -82,3 +82,50 @@ def test_uploaded_pdf_link_opens_the_original_document(monkeypatch, tmp_path: Pa
     assert opened.status_code == 200
     assert opened.content == buffer.getvalue()
     assert opened.headers["content-type"] == "application/pdf"
+
+
+def test_uploaded_text_file_reaches_the_connected_workspace(monkeypatch, tmp_path: Path):
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setattr(api, "workspace", api.Workspace())
+    monkeypatch.setattr(api, "UPLOAD_ROOT", tmp_path / "uploads")
+    client = TestClient(api.app)
+
+    response = client.post(
+        "/api/materials",
+        files={"files": ("calculus-notes.txt", b"A derivative measures instantaneous change.", "text/plain")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["reports"][0]["status"] == "indexed"
+    assert body["reports"][0]["type"] == "document"
+    assert body["workspace"]["source_count"] == 1
+    assert api.workspace.chunks[0].citation.section == "paragraph 1"
+
+
+def test_web_link_endpoint_indexes_a_fetched_page(monkeypatch):
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+    from studybuddy.ingestion.web import RemoteResource
+
+    monkeypatch.setattr(api, "workspace", api.Workspace())
+    monkeypatch.setattr(
+        api,
+        "fetch_public_resource",
+        lambda url: RemoteResource(
+            content=b"<html><title>Networks</title><body><h2>Routing</h2><p>A router forwards packets between networks.</p></body></html>",
+            content_type="text/html",
+            final_url=url,
+            filename="networks.html",
+        ),
+    )
+    client = TestClient(api.app)
+
+    response = client.post("/api/materials/url", json={"url": "https://example.com/networks"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["report"]["type"] == "web page"
+    assert api.workspace.chunks[0].citation.section == "Routing"

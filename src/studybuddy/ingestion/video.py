@@ -7,6 +7,7 @@ model directly on the user-uploaded video--there is no manual transcript step.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -33,6 +34,7 @@ def segments_from_transcript(
     source_id: str,
     source_name: str,
     source_uri: str | None = None,
+    source_type: SourceType = SourceType.VIDEO,
 ) -> list[SourceSegment]:
     """Convert timestamped speech into individual, directly citeable segments."""
     return [
@@ -41,7 +43,7 @@ def segments_from_transcript(
             citation=CitationAnchor(
                 source_id=source_id,
                 source_name=source_name,
-                source_type=SourceType.VIDEO,
+                source_type=source_type,
                 source_uri=source_uri,
                 start_seconds=span.start_seconds,
                 end_seconds=span.end_seconds,
@@ -59,6 +61,7 @@ def transcribe_video(
     source_name: str,
     source_uri: str | None = None,
     model_size: str = "base",
+    source_type: SourceType = SourceType.VIDEO,
 ) -> list[SourceSegment]:
     """Run local faster-whisper and return timestamp-cited transcript segments."""
     video_path = Path(path)
@@ -72,7 +75,9 @@ def transcribe_video(
             "Install it with: pip install -e '.[ingestion]'"
         ) from error
 
-    model = WhisperModel(model_size, device="auto", compute_type="int8")
+    device = os.getenv("WHISPER_DEVICE", "cpu")
+    compute_type = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
+    model = WhisperModel(model_size, device=device, compute_type=compute_type)
     raw_segments, _ = model.transcribe(str(video_path), vad_filter=True)
     spans = [
         TranscriptSpan(text=segment.text, start_seconds=segment.start, end_seconds=segment.end)
@@ -80,5 +85,6 @@ def transcribe_video(
         if segment.text.strip()
     ]
     return segments_from_transcript(
-        spans, source_id=source_id, source_name=source_name, source_uri=source_uri
+        spans, source_id=source_id, source_name=source_name, source_uri=source_uri,
+        source_type=source_type,
     )

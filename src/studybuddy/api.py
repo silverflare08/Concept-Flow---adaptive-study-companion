@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from concurrent.futures import ThreadPoolExecutor
+import mimetypes
 from pathlib import Path
 from uuid import uuid4
 
@@ -20,18 +21,16 @@ from pydantic import BaseModel, Field
 from studybuddy.course_map import CourseMap
 from studybuddy.ingestion.chunker import chunk_segments
 from studybuddy.ingestion.models import KnowledgeChunk
-from studybuddy.ingestion.pdf import ingest_pdf
-from studybuddy.ingestion.slides import ingest_slides
+from studybuddy.ingestion.router import SUPPORTED_FILE_TYPES, parse_study_file
+from studybuddy.ingestion.video import transcribe_video
+from studybuddy.ingestion.web import fetch_public_resource, ingest_web_page, is_youtube_url
+from studybuddy.ingestion.youtube import download_youtube_audio
 from studybuddy.retrieval.bm25 import BM25Index
 from studybuddy.tutor.course_map_generator import generate_course_map
 from studybuddy.tutor.grounded import call_ollama_json, tutor_answer
 
 
 UPLOAD_ROOT = Path("data/uploads")
-SUPPORTED_DOCUMENT_TYPES = {".pdf", ".pptx"}
-SUPPORTED_VIDEO_TYPES = {".mp4", ".mov", ".mkv"}
-
-
 @dataclass
 class Workspace:
     name: str = "My study space"
@@ -68,6 +67,27 @@ class TutorRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
 
 
+class UrlMaterialRequest(BaseModel):
+    url: str = Field(min_length=8, max_length=2000)
+
+
+def add_indexed_material(
+    *, source_id: str, name: str, kind: str, segments: list, stored_path: Path | None = None,
+) -> dict[str, object]:
+    chunks = chunk_segments(segments)
+    if not chunks:
+        raise ValueError("No readable study content was found in this source.")
+    workspace.chunks.extend(chunks)
+    workspace.course_map = None
+    if stored_path is not None:
+        workspace.source_files[source_id] = stored_path
+    workspace.revision = uuid4().hex
+    workspace.guide_job = None
+    source = {"name": name, "type": kind, "status": "indexed", "chunks": len(chunks)}
+    workspace.sources.append(source)
+    return source
+
+
 def workspace_summary() -> dict[str, object]:
     return {
         "name": workspace.name,
@@ -96,6 +116,9 @@ def course_map_view(course_map: CourseMap) -> dict[str, object]:
                         "source_name": chunks_by_id[chunk_id].citation.source_name,
                         "page": chunks_by_id[chunk_id].citation.page,
                         "slide": chunks_by_id[chunk_id].citation.slide,
+                        "start_seconds": chunks_by_id[chunk_id].citation.start_seconds,
+                        "section": chunks_by_id[chunk_id].citation.section,
+                        "evidence_kind": chunks_by_id[chunk_id].evidence_kind.value,
                         "target_uri": chunks_by_id[chunk_id].citation.target_uri(),
                     }
                     for chunk_id in concept.evidence_chunk_ids
@@ -113,7 +136,7 @@ def course_map_view(course_map: CourseMap) -> dict[str, object]:
         "coverage": {
             "indexed_chunks": len(workspace.chunks),
             "mapped_chunks": len({cid for concept in course_map.concepts for cid in concept.evidence_chunk_ids}),
-            "scope": "Extracted document text; images and scanned pages require the upcoming vision/OCR pipeline.",
+            "scope": "Indexed text, transcripts, web content, and locally interpreted visual material.",
         },
     }
 
@@ -150,38 +173,80 @@ async def upload_materials(files: list[UploadFile] = File(...)) -> dict[str, obj
     for uploaded in files:
         original_name = Path(uploaded.filename or "untitled").name
         suffix = Path(original_name).suffix.lower()
-        if suffix not in SUPPORTED_DOCUMENT_TYPES | SUPPORTED_VIDEO_TYPES:
-            reports.append({"name": original_name, "status": "unsupported", "message": "Use PDF, PPTX, MP4, MOV, or MKV."})
+        if suffix not in SUPPORTED_FILE_TYPES:
+            reports.append({"name": original_name, "status": "unsupported", "message": "Use PDF, PPTX, DOCX, TXT, MD, image, audio, or video files."})
             continue
 
         stored_path = UPLOAD_ROOT / f"{uuid4().hex}-{original_name}"
         stored_path.write_bytes(await uploaded.read())
         source_id = f"source-{uuid4().hex[:12]}"
 
-        if suffix in SUPPORTED_VIDEO_TYPES:
-            workspace.sources.append({"name": original_name, "type": "video", "status": "queued for transcription"})
-            reports.append({"name": original_name, "status": "queued", "message": "Video saved; transcription is the next ingestion feature."})
-            continue
-
         try:
-            if suffix == ".pdf":
-                parsed = ingest_pdf(stored_path, source_id=source_id, source_name=original_name, source_uri=f"/api/sources/{source_id}")
-            else:
-                parsed = ingest_slides(stored_path, source_id=source_id, source_name=original_name, source_uri=f"/api/sources/{source_id}")
-            chunks = chunk_segments(parsed.segments)
-            workspace.chunks.extend(chunks)
-            workspace.course_map = None
-            workspace.source_files[source_id] = stored_path
-            workspace.revision = uuid4().hex
-            workspace.guide_job = None
-            workspace.sources.append(
-                {"name": original_name, "type": suffix.removeprefix("."), "status": "indexed", "chunks": len(chunks)}
+            parsed = parse_study_file(
+                stored_path, source_id=source_id, source_name=original_name,
+                source_uri=f"/api/sources/{source_id}",
             )
-            reports.append({"name": original_name, "status": "indexed", "chunks": len(chunks)})
+            source = add_indexed_material(
+                source_id=source_id, name=original_name, kind=parsed.kind,
+                segments=parsed.segments, stored_path=stored_path,
+            )
+            reports.append(source)
         except Exception as error:
             reports.append({"name": original_name, "status": "failed", "message": str(error)})
 
     return {"reports": reports, "workspace": workspace_summary()}
+
+
+@app.post("/api/materials/url")
+def import_material_url(request: UrlMaterialRequest) -> dict[str, object]:
+    """Import a YouTube lecture, direct study file, PDF book, or public web page."""
+    source_id = f"source-{uuid4().hex[:12]}"
+    try:
+        if is_youtube_url(request.url):
+            path, title, canonical_url = download_youtube_audio(request.url, UPLOAD_ROOT / "youtube")
+            segments = transcribe_video(
+                path, source_id=source_id, source_name=title, source_uri=canonical_url,
+            )
+            source = add_indexed_material(
+                source_id=source_id, name=title, kind="youtube video",
+                segments=segments, stored_path=path,
+            )
+        else:
+            resource = fetch_public_resource(request.url)
+            suffix = Path(resource.filename).suffix.lower()
+            is_html = resource.content_type in {"text/html", "application/xhtml+xml"}
+            if is_html:
+                display_name, segments = ingest_web_page(
+                    resource.content, source_id=source_id, source_name=resource.filename,
+                    source_uri=resource.final_url,
+                )
+                source = add_indexed_material(
+                    source_id=source_id, name=display_name, kind="web page", segments=segments,
+                )
+            else:
+                if suffix not in SUPPORTED_FILE_TYPES:
+                    content_suffixes = {
+                        "application/pdf": ".pdf",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+                        "image/png": ".png", "image/jpeg": ".jpg", "text/plain": ".txt",
+                    }
+                    suffix = content_suffixes.get(resource.content_type, "")
+                if suffix not in SUPPORTED_FILE_TYPES:
+                    raise ValueError(f"Unsupported link content type: {resource.content_type}")
+                name = resource.filename if Path(resource.filename).suffix else f"linked-material{suffix}"
+                stored_path = UPLOAD_ROOT / f"{uuid4().hex}-{Path(name).name}"
+                stored_path.parent.mkdir(parents=True, exist_ok=True)
+                stored_path.write_bytes(resource.content)
+                parsed = parse_study_file(
+                    stored_path, source_id=source_id, source_name=name, source_uri=resource.final_url,
+                )
+                source = add_indexed_material(
+                    source_id=source_id, name=name, kind=parsed.kind,
+                    segments=parsed.segments, stored_path=stored_path,
+                )
+    except Exception as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return {"report": source, "workspace": workspace_summary()}
 
 
 @app.get("/api/sources/{source_id}")
@@ -190,9 +255,11 @@ def open_source(source_id: str) -> FileResponse:
     path = workspace.source_files.get(source_id)
     if path is None or not path.is_file():
         raise HTTPException(status_code=404, detail="Source unavailable. Upload the original material again.")
-    if path.suffix.lower() == ".pdf":
-        return FileResponse(path, media_type="application/pdf", content_disposition_type="inline")
-    return FileResponse(path, filename=path.name.split("-", 1)[-1])
+    media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    inline_types = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".mp3", ".wav", ".m4a", ".mp4", ".webm", ".mov"}
+    if path.suffix.lower() in inline_types:
+        return FileResponse(path, media_type=media_type, content_disposition_type="inline")
+    return FileResponse(path, media_type=media_type, filename=path.name.split("-", 1)[-1])
 
 
 def run_guide_job(job: dict[str, object], revision: str, title: str, chunks: list[KnowledgeChunk]) -> None:
@@ -212,7 +279,7 @@ def run_guide_job(job: dict[str, object], revision: str, title: str, chunks: lis
 @app.post("/api/study-guide/generate", status_code=202)
 def start_study_guide() -> dict[str, object]:
     if not workspace.chunks:
-        raise HTTPException(status_code=400, detail="Upload a readable PDF or slide deck first.")
+        raise HTTPException(status_code=400, detail="Upload or import readable study material first.")
     if workspace.guide_job and workspace.guide_job["status"] == "running":
         return {"job": dict(workspace.guide_job)}
     job: dict[str, object] = {"job_id": uuid4().hex, "status": "running", "completed_batches": 0, "total_batches": 0}
@@ -264,6 +331,8 @@ def search_course(request: SearchRequest) -> dict[str, object]:
                     "page": result.chunk.citation.page,
                     "slide": result.chunk.citation.slide,
                     "start_seconds": result.chunk.citation.start_seconds,
+                    "section": result.chunk.citation.section,
+                    "target_uri": result.chunk.citation.target_uri(),
                 },
             }
             for result in results

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, FileText, FolderPlus, GitBranch, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Upload, X } from "lucide-react";
 import "./index.css";
 import StudyViews from "./StudyViews.jsx";
+import MaterialsPage from "./MaterialsPage.jsx";
 
 // In development, Vite forwards /api to FastAPI. This avoids browser-specific
 // localhost restrictions; deployment can override it with VITE_API_URL.
@@ -35,6 +36,11 @@ function App() {
     const response = await fetch(`${API}/api/materials`, { method: "POST", body: form });
     const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Upload failed.");
     setWorkspace(data.workspace); setCourseMap(null); setNotice(data.reports.map(report => report.message || `${report.name}: ${report.status} (${report.chunks || 0} chunks)`).join(" · "));
+  }
+  async function uploadUrl(url) {
+    const response = await fetch(`${API}/api/materials/url`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
+    const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Link import failed.");
+    setWorkspace(data.workspace); setCourseMap(null); setNotice(`${data.report.name}: indexed (${data.report.chunks} chunks)`); return data;
   }
   async function askTutor() {
     if (!query.trim()) return; setTutorState({ status: "loading", reply: null, message: "" });
@@ -79,7 +85,7 @@ function App() {
     "Revision Mind Map": <StudyViews mode="revision" workspace={workspace} guide={courseMap} generate={generateCourseMap} progress={guideProgress} setPage={setPage} startTutorFor={startTutorFor} api={API}/>,
     Practise: <Practise workspace={workspace} setPage={setPage} />,
     Progress: <Progress workspace={workspace} setPage={setPage} />,
-    Materials: <Materials workspace={workspace} createWorkspace={createWorkspace} uploadMaterials={uploadMaterials} notice={notice} />
+    Materials: <MaterialsPage workspace={workspace} createWorkspace={createWorkspace} uploadMaterials={uploadMaterials} uploadUrl={uploadUrl} notice={notice} />
   };
   return <div className="min-h-screen bg-[radial-gradient(circle_at_88%_7%,#efeaff_0,transparent_25%),radial-gradient(circle_at_8%_88%,#e4f5ee_0,transparent_26%),#f8f7fc]">
     <aside className={`fixed inset-y-0 z-30 w-72 border-r border-white/70 bg-[#f3f0fa]/90 p-5 backdrop-blur-xl transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>

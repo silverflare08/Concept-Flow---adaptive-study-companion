@@ -3,12 +3,14 @@ import { ArrowRight, BookOpen, FileText, GitBranch, RefreshCw } from "lucide-rea
 
 export function SourceReferences({ evidence = [], api = "", compact = false }) {
   return <div className="space-y-2">{evidence.map((source, index) => {
-    const location = source.page ? `PDF page ${source.page}` : source.slide ? `Slide ${source.slide}` : source.label;
+    const seconds = Math.floor(source.start_seconds || 0); const timestamp = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+    const location = source.page ? `PDF page ${source.page}` : source.slide ? `Slide ${source.slide}` : source.start_seconds != null ? `Timestamp ${timestamp}` : source.section || source.label;
     const href = source.target_uri?.startsWith("/") ? `${api}${source.target_uri}` : source.target_uri;
+    const openLabel = source.page ? `Open PDF at page ${source.page}` : source.slide ? `Download slides · go to slide ${source.slide}` : source.start_seconds != null ? `Open at ${timestamp}` : "Open original source";
     return <div key={`${source.label}-${index}`} className="rounded-xl bg-sky/35 p-3 text-sm">
       <p className="flex items-start gap-2 font-semibold text-slate-700"><FileText size={16} className="mt-0.5 shrink-0"/><span>{location}{source.source_name ? ` in ${source.source_name}` : ""}</span></p>
       {!compact && source.excerpt && <blockquote className="mt-2 leading-6 text-slate-600">“{source.excerpt}”</blockquote>}
-      {href && <a href={href} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold text-plum underline underline-offset-4">{source.slide ? `Download slides · go to slide ${source.slide}` : `Open PDF at page ${source.page}`}<ArrowRight size={14}/></a>}
+      {href && <a href={href} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold text-plum underline underline-offset-4">{openLabel}<ArrowRight size={14}/></a>}
     </div>;
   })}</div>;
 }

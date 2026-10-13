@@ -10,6 +10,10 @@ class SourceType(StrEnum):
     PDF = "pdf"
     SLIDE = "slide"
     VIDEO = "video"
+    AUDIO = "audio"
+    DOCUMENT = "document"
+    IMAGE = "image"
+    WEB = "web"
 
 
 class EvidenceKind(StrEnum):
@@ -19,6 +23,7 @@ class EvidenceKind(StrEnum):
     OCR = "ocr"
     FIGURE_DESCRIPTION = "figure_description"
     TRANSCRIPT = "transcript"
+    VISION = "vision"
 
 
 class CitationAnchor(BaseModel):
@@ -40,8 +45,8 @@ class CitationAnchor(BaseModel):
             raise ValueError("A PDF citation needs a page number")
         if self.source_type is SourceType.SLIDE and self.slide is None:
             raise ValueError("A slide citation needs a slide number")
-        if self.source_type is SourceType.VIDEO and self.start_seconds is None:
-            raise ValueError("A video citation needs a start timestamp")
+        if self.source_type in {SourceType.VIDEO, SourceType.AUDIO} and self.start_seconds is None:
+            raise ValueError("An audio or video citation needs a start timestamp")
         return self
 
     def label(self) -> str:
@@ -49,9 +54,15 @@ class CitationAnchor(BaseModel):
             location = f"PDF page {self.page}"
         elif self.source_type is SourceType.SLIDE:
             location = f"slide {self.slide}"
-        else:
+        elif self.source_type in {SourceType.VIDEO, SourceType.AUDIO}:
             minutes, seconds = divmod(int(self.start_seconds or 0), 60)
             location = f"{minutes:02d}:{seconds:02d}"
+        elif self.section:
+            location = self.section
+        elif self.source_type is SourceType.IMAGE:
+            location = "image"
+        else:
+            location = "web page"
         return f"{self.source_name}, {location}"
 
     def target_uri(self) -> str | None:
@@ -62,7 +73,13 @@ class CitationAnchor(BaseModel):
             return f"{self.source_uri}#page={self.page}"
         if self.source_type is SourceType.SLIDE:
             return f"{self.source_uri}#page={self.slide}"
-        return f"{self.source_uri}#t={int(self.start_seconds or 0)}"
+        if self.source_type in {SourceType.VIDEO, SourceType.AUDIO}:
+            seconds = int(self.start_seconds or 0)
+            if "youtu.be" in self.source_uri or "youtube.com" in self.source_uri:
+                separator = "&" if "?" in self.source_uri else "?"
+                return f"{self.source_uri}{separator}t={seconds}s"
+            return f"{self.source_uri}#t={seconds}"
+        return self.source_uri
 
 
 class SourceSegment(BaseModel):
