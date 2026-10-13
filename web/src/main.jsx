@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, Clock3, FileText, FolderPlus, GitBranch, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Trash2, Upload, X } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, Clock3, FileText, FolderPlus, GitBranch, Headphones, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Trash2, Upload, X } from "lucide-react";
 import "./index.css";
 import StudyViews from "./StudyViews.jsx";
 import MaterialsPage from "./MaterialsPage.jsx";
@@ -10,11 +10,13 @@ import DashboardPage from "./DashboardPage.jsx";
 import AssessmentPage from "./AssessmentPage.jsx";
 import ProgressPage from "./ProgressPage.jsx";
 import ConfirmDialog from "./ConfirmDialog.jsx";
+import FlashcardsPage from "./FlashcardsPage.jsx";
+import StudyMediaPage from "./StudyMediaPage.jsx";
 
 // In development, Vite forwards /api to FastAPI. This avoids browser-specific
 // localhost restrictions; deployment can override it with VITE_API_URL.
 const API = import.meta.env.VITE_API_URL || "";
-const navItems = [["Home", Home], ["Learn", BookOpen], ["Learning Flow", BookOpen], ["Revision Mind Map", GitBranch], ["Practise", Target], ["Progress", BarChart3], ["Materials", Layers3], ["History", Clock3]];
+const navItems = [["Home", Home], ["Learn", BookOpen], ["Learning Flow", BookOpen], ["Revision Mind Map", GitBranch], ["Flashcards", Layers3], ["Practise", Target], ["Audio & Video", Headphones], ["Progress", BarChart3], ["Materials", Layers3], ["History", Clock3]];
 
 function App() {
   const [page, setPage] = useState("Home");
@@ -22,20 +24,22 @@ function App() {
   const [workspace, setWorkspace] = useState({ name: "My study space", source_count: 0, chunk_count: 0, sources: [] });
   const [courseMap, setCourseMap] = useState(null);
   const [guideProgress, setGuideProgress] = useState(null);
+  const [overviewProgress, setOverviewProgress] = useState(null);
   const [query, setQuery] = useState("");
   const [tutorState, setTutorState] = useState({ status: "idle", reply: null, message: "" });
   const [notice, setNotice] = useState("");
-  const [library, setLibrary] = useState({ courses: [], conversations: [], artifacts: [], assessments: [] });
+  const [library, setLibrary] = useState({ courses: [], conversations: [], artifacts: [], assessments: [], archivedCourses: [] });
   const [conversationId, setConversationId] = useState(null);
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [pendingWorkspaceDelete, setPendingWorkspaceDelete] = useState(null);
   const [deletingWorkspace, setDeletingWorkspace] = useState(false);
+  const [mediaRequest, setMediaRequest] = useState({ sourceId: "", mode: "audio" });
 
   async function refreshLibrary() {
     const [coursesResponse, historyResponse] = await Promise.all([fetch(`${API}/api/courses`), fetch(`${API}/api/history`)]);
     if (coursesResponse.ok && historyResponse.ok) {
       const courses = await coursesResponse.json(); const history = await historyResponse.json();
-      setLibrary({ courses: courses.courses, conversations: history.conversations, artifacts: history.artifacts, assessments: history.assessments || [] });
+      setLibrary({ courses: courses.courses, conversations: history.conversations, artifacts: history.artifacts, assessments: history.assessments || [], archivedCourses: history.archived_courses || [] });
     }
   }
 
@@ -66,7 +70,7 @@ function App() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(response.status === 405 ? "The backend is still running an older version. Restart uvicorn, then delete the material again." : data.detail || "Could not delete this material.");
     setWorkspace(data.workspace); setCourseMap(null); setGuideProgress(null); await refreshLibrary();
-    setNotice(`Deleted “${data.deleted.name}” from ${data.workspace.name}.`); return data;
+    setNotice(`Archived “${data.archived.name}” from active study. Its chats, maps, assessments and original source remain available in history.`); return data;
   }
   async function deleteWorkspace(course) {
     setDeletingWorkspace(true);
@@ -77,14 +81,14 @@ function App() {
       setWorkspace(data.workspace); setConversationId(null); setTutorState({ status: "idle", reply: null, message: "" });
       const mapResponse = await fetch(`${API}/api/course-map`); setCourseMap(mapResponse.ok ? (await mapResponse.json()).course_map : null);
       setGuideProgress(null); await refreshLibrary(); setPage("Home");
-      setNotice(`Deleted workspace “${course.name}”.`);
+      setNotice(`Archived workspace “${course.name}”. Its chats, maps, assessments and sources were preserved.`);
     } catch (error) { setNotice(error.message); }
     finally { setDeletingWorkspace(false); setPendingWorkspaceDelete(null); }
   }
-  async function askTutor() {
+  async function askTutor(language = "english") {
     if (!query.trim()) return; setTutorState({ status: "loading", reply: null, message: "" });
     try {
-      const response = await fetch(`${API}/api/tutor`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: query, conversation_id: conversationId }) });
+      const response = await fetch(`${API}/api/tutor`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: query, conversation_id: conversationId, language }) });
       const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Tutor request failed.");
       setConversationId(data.conversation_id); setTutorState({ status: data.coverage === "not_covered" ? "empty" : "ready", reply: data, message: data.coverage === "not_covered" ? data.answer : "" }); await refreshLibrary();
     } catch (error) { setTutorState({ status: "error", reply: null, message: error.message }); }
@@ -111,6 +115,26 @@ function App() {
       setWorkspace(current => ({ ...current, course_map_ready: true })); await refreshLibrary(); return result.course_map;
     } catch (error) { setGuideProgress({ status: "failed", view, error: error.message }); throw error; }
   }
+  async function studyWholeMaterial(sourceIds = [], language = "english") {
+    setTutorState({ status: "loading", reply: null, message: "" });
+    setOverviewProgress({ status: "running", completed_batches: 0, total_batches: 0 });
+    try {
+      const response = await fetch(`${API}/api/tutor/overview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source_ids: sourceIds, language }) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Could not start the full-material lesson.");
+      let job = data.job;
+      while (job?.status === "running") {
+        setOverviewProgress(job); await new Promise(resolve => setTimeout(resolve, 1500));
+        const statusResponse = await fetch(`${API}/api/tutor/overview/status?job_id=${encodeURIComponent(data.job.job_id)}`);
+        if (!statusResponse.ok) throw new Error("Could not check lesson progress.");
+        const status = await statusResponse.json();
+        if (status.job?.job_id !== data.job.job_id) throw new Error("The material changed. Start the lesson again.");
+        job = status.job;
+      }
+      if (job?.status !== "complete") throw new Error(job?.error || "The lesson could not be completed.");
+      setConversationId(job.result.conversation_id); setTutorState({ status: "ready", reply: job.result, message: "" });
+      setOverviewProgress(job); await refreshLibrary();
+    } catch (error) { setOverviewProgress({ status: "failed", error: error.message }); setTutorState({ status: "error", reply: null, message: error.message }); }
+  }
   function startTutorFor(conceptName) {
     setTutorState({ status: "idle", reply: null, message: "" });
     setQuery(`Teach me ${conceptName} in simple words, using my course material.`);
@@ -125,26 +149,33 @@ function App() {
   }
   function openHistoryConversation(id) { setSelectedConversationId(id); setPage("History"); setSidebarOpen(false); }
   function newChat() { setConversationId(null); setQuery(""); setTutorState({ status: "idle", reply: null, message: "" }); }
+  function openStudyMedia(sourceId = "", mode = "audio") { setMediaRequest({ sourceId, mode }); setPage("Audio & Video"); setSidebarOpen(false); }
 
   const content = {
     Home: <DashboardPage workspace={workspace} setPage={setPage} notice={notice} />,
-    Learn: <TutorPage api={API} workspace={workspace} query={query} setQuery={setQuery} askTutor={askTutor} state={tutorState} conversationId={conversationId} newChat={newChat} />,
+    Learn: <TutorPage api={API} workspace={workspace} query={query} setQuery={setQuery} askTutor={askTutor} state={tutorState} conversationId={conversationId} newChat={newChat} studyWholeMaterial={studyWholeMaterial} overviewProgress={overviewProgress} />,
     "Learning Flow": <StudyViews mode="learning" workspace={workspace} guide={courseMap} generate={generateCourseMap} progress={guideProgress} setPage={setPage} startTutorFor={startTutorFor} api={API}/>,
     "Revision Mind Map": <StudyViews mode="revision" workspace={workspace} guide={courseMap} generate={generateCourseMap} progress={guideProgress} setPage={setPage} startTutorFor={startTutorFor} api={API}/>,
+    Flashcards: <FlashcardsPage api={API} workspace={workspace} guide={courseMap} setPage={setPage} generate={generateCourseMap} progress={guideProgress}/>,
     Practise: <AssessmentPage api={API} workspace={workspace} guide={courseMap} refreshLibrary={refreshLibrary} />,
-    Progress: <ProgressPage api={API} workspace={workspace} setPage={setPage} />,
-    Materials: <MaterialsPage api={API} workspace={workspace} courses={library.courses} createWorkspace={createWorkspace} selectCourse={courseId => selectCourse(courseId, "Materials")} uploadMaterials={uploadMaterials} uploadUrl={uploadUrl} deleteMaterial={deleteMaterial} notice={notice} />,
-    History: <HistoryPage api={API} history={{ conversations: library.conversations, artifacts: library.artifacts, assessments: library.assessments || [] }} courses={library.courses} activeCourseId={workspace.id} selectCourse={selectCourse} selectedConversationId={selectedConversationId} onSelectConversation={setSelectedConversationId} />
+    "Audio & Video": <StudyMediaPage api={API} workspace={workspace} requestedSourceId={mediaRequest.sourceId} requestedMode={mediaRequest.mode} refreshLibrary={refreshLibrary}/>,
+    Progress: <ProgressPage api={API} workspace={workspace} setPage={setPage} selectCourse={selectCourse} />,
+    Materials: <MaterialsPage api={API} workspace={workspace} courses={library.courses} createWorkspace={createWorkspace} selectCourse={courseId => selectCourse(courseId, "Materials")} uploadMaterials={uploadMaterials} uploadUrl={uploadUrl} deleteMaterial={deleteMaterial} openStudyMedia={openStudyMedia} notice={notice} />,
+    History: <HistoryPage api={API} history={{ conversations: library.conversations, artifacts: library.artifacts, assessments: library.assessments || [], archivedCourses: library.archivedCourses || [] }} courses={library.courses} activeCourseId={workspace.id} selectCourse={selectCourse} selectedConversationId={selectedConversationId} onSelectConversation={setSelectedConversationId} />
   };
   return <div className="min-h-screen bg-[radial-gradient(circle_at_88%_7%,#efeaff_0,transparent_25%),radial-gradient(circle_at_8%_88%,#e4f5ee_0,transparent_26%),#f8f7fc]">
-    <aside className={`fixed inset-y-0 z-30 w-72 border-r border-white/70 bg-[#f3f0fa]/90 p-5 backdrop-blur-xl transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-      <div className="mb-10 flex items-center justify-between"><Brand/><button onClick={() => setSidebarOpen(false)} className="lg:hidden"><X size={20}/></button></div>
-      <p className="eyebrow mb-3 px-3">Workspace</p><nav className="space-y-1">{navItems.map(([label, Icon]) => <button key={label} onClick={() => { setPage(label); setSidebarOpen(false); }} className={`nav-item ${page === label ? "nav-item-active" : ""}`}><Icon size={18}/>{label}</button>)}</nav>
-      <div className="mt-7 border-t border-white/70 pt-5"><p className="eyebrow mb-2 px-3">Recent courses</p><div className="space-y-1">{library.courses.slice(0, 4).map(course => <div key={course.id} className={`group flex items-center rounded-xl ${course.id === workspace.id ? "bg-white shadow-sm" : "hover:bg-white/60"}`}><button onClick={() => selectCourse(course.id)} className={`min-w-0 flex-1 truncate px-3 py-2 text-left text-sm ${course.id === workspace.id ? "font-bold text-plum" : "text-slate-600"}`}>{course.name}</button><button onClick={() => setPendingWorkspaceDelete(course)} title={`Delete workspace ${course.name}`} className="mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 opacity-70 transition hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"><Trash2 size={15}/></button></div>)}</div><p className="eyebrow mb-2 mt-5 px-3">Recent chats</p><div className="space-y-1">{library.conversations.slice(0, 3).map(item => <button key={item.id} onClick={() => openHistoryConversation(item.id)} className="w-full truncate rounded-xl px-3 py-2 text-left text-sm text-slate-600 hover:bg-white/60">{item.title}</button>)}</div></div>
+    <aside className={`fixed inset-y-0 z-30 flex w-72 flex-col overflow-hidden border-r border-white/70 bg-[#f3f0fa]/90 p-5 backdrop-blur-xl transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <div className="mb-5 flex shrink-0 items-center justify-between"><Brand/><button onClick={() => setSidebarOpen(false)} className="lg:hidden"><X size={20}/></button></div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"><p className="eyebrow mb-3 px-3">Workspace</p><nav className="space-y-1">{navItems.map(([label, Icon]) => <button key={label} onClick={() => { setPage(label); setSidebarOpen(false); }} className={`nav-item ${page === label ? "nav-item-active" : ""}`}><Icon size={18}/>{label}</button>)}</nav><SidebarLibrary courses={library.courses} conversations={library.conversations} workspace={workspace} selectCourse={selectCourse} openHistoryConversation={openHistoryConversation} archiveCourse={setPendingWorkspaceDelete}/></div>
     </aside>
     <main className="min-h-screen lg:pl-72"><header className="flex items-center justify-between px-5 py-5 sm:px-9"><button onClick={() => setSidebarOpen(true)} className="rounded-xl bg-white p-2 text-slate-600 shadow-sm lg:hidden"><Menu size={20}/></button><div className="hidden lg:block"/><div className="flex items-center gap-3"><div className="hidden text-right sm:block"><p className="text-sm font-semibold">{workspace.name}</p><p className="text-xs text-slate-500">{workspace.source_count} source{workspace.source_count === 1 ? "" : "s"} indexed</p></div><div className="grid h-10 w-10 place-items-center rounded-full bg-lilac font-bold text-plum">P</div></div></header><section className="mx-auto max-w-7xl px-5 pb-12 sm:px-9">{content[page]}</section></main>
-    <ConfirmDialog open={!!pendingWorkspaceDelete} title="Delete this entire workspace?" body={pendingWorkspaceDelete ? `“${pendingWorkspaceDelete.name}” will be permanently deleted with its uploaded materials, chats, generated maps, assessments and progress. This cannot be undone.` : ""} confirmLabel="Delete workspace" busy={deletingWorkspace} onCancel={() => setPendingWorkspaceDelete(null)} onConfirm={() => deleteWorkspace(pendingWorkspaceDelete)}/>
+    <ConfirmDialog open={!!pendingWorkspaceDelete} title="Remove this workspace from active study?" body={pendingWorkspaceDelete ? `“${pendingWorkspaceDelete.name}” will be archived from Recent Courses. Its uploaded sources, chats, generated maps, assessments and progress will stay safely stored in History.` : ""} confirmLabel="Archive workspace" busy={deletingWorkspace} onCancel={() => setPendingWorkspaceDelete(null)} onConfirm={() => deleteWorkspace(pendingWorkspaceDelete)}/>
   </div>;
+}
+
+function SidebarLibrary({ courses, conversations, workspace, selectCourse, openHistoryConversation, archiveCourse }) {
+  const courseChats = conversations.filter(item => item.course_id === workspace.id);
+  return <div className="mt-5 border-t border-white/70 pt-4"><p className="eyebrow mb-2 px-3">Recent courses</p><div className="space-y-1">{courses.slice(0, 8).map(course => <div key={course.id} className={`group flex items-center rounded-xl ${course.id === workspace.id ? "bg-white shadow-sm" : "hover:bg-white/60"}`}><button onClick={() => selectCourse(course.id)} className={`min-w-0 flex-1 truncate px-3 py-2 text-left text-sm ${course.id === workspace.id ? "font-bold text-plum" : "text-slate-600"}`}>{course.name}</button><button onClick={() => archiveCourse(course)} title={`Archive workspace ${course.name}`} className="mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 opacity-70 transition hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"><Trash2 size={15}/></button></div>)}</div><div className="mb-2 mt-5 flex items-center justify-between px-3"><p className="eyebrow">Recent chats</p><span className="text-[10px] font-semibold text-slate-400">{courseChats.length}</span></div><div className="space-y-1 pb-5">{courseChats.length ? courseChats.map(item => <button key={item.id} onClick={() => openHistoryConversation(item.id)} className="w-full rounded-xl px-3 py-2 text-left text-sm text-slate-600 hover:bg-white/60" title={item.title}><span className="block truncate font-medium">{item.title}</span><span className="mt-0.5 block text-[10px] text-slate-400">{new Date(item.updated_at).toLocaleDateString()}</span></button>) : <p className="px-3 py-2 text-xs leading-5 text-slate-400">Chats for this workspace will appear here.</p>}</div></div>;
 }
 
 function Brand() { return <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-plum text-white shadow-lg shadow-plum/25"><BrainCircuit size={22}/></div><div><p className="text-lg font-extrabold tracking-tight">ConceptFlow</p><p className="text-xs text-slate-500">Study with clarity</p></div></div>; }

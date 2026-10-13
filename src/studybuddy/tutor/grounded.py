@@ -22,6 +22,19 @@ DEFAULT_MODEL = "qwen2.5:3b-instruct"
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434/api/chat"
 
 
+def ollama_available() -> bool:
+    """Quickly check the local Ollama service before starting a long generation job."""
+    endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
+    tags_endpoint = endpoint.rsplit("/api/", 1)[0] + "/api/tags"
+    try:
+        with urlopen(tags_endpoint, timeout=2) as response:  # nosec B310 - local configurable endpoint
+            payload = json.loads(response.read().decode("utf-8"))
+    except (URLError, TimeoutError, json.JSONDecodeError):
+        return False
+    configured = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
+    return any(model.get("name") == configured or model.get("model") == configured for model in payload.get("models", []))
+
+
 @dataclass(frozen=True)
 class TutorReply:
     answer: str
@@ -30,7 +43,7 @@ class TutorReply:
     coverage: str
 
 
-def _citation(chunk: KnowledgeChunk) -> dict[str, object]:
+def citation_for_chunk(chunk: KnowledgeChunk) -> dict[str, object]:
     return {
         "label": chunk.citation.label(),
         "source_name": chunk.citation.source_name,
@@ -44,12 +57,17 @@ def _citation(chunk: KnowledgeChunk) -> dict[str, object]:
     }
 
 
-def build_tutor_prompt(question: str, evidence: Iterable[KnowledgeChunk]) -> str:
+def build_tutor_prompt(question: str, evidence: Iterable[KnowledgeChunk], language: str = "english") -> str:
     """Build a constrained prompt from cited course evidence."""
     passages = []
     for number, chunk in enumerate(evidence, start=1):
         passages.append(f"[{number}] {chunk.citation.label()}\n{chunk.text[:1400]}")
     context = "\n\n".join(passages)
+    language_instruction = {
+        "english": "Explain in clear, natural English.",
+        "hindi": "Explain in natural Hindi using Devanagari script, while retaining necessary technical terms in English.",
+        "hinglish": "Explain in natural conversational Hinglish: Hindi in Devanagari mixed with familiar English technical terms.",
+    }.get(language, "Explain in clear, natural English.")
     return f"""You are ConceptFlow, a patient and accurate study tutor.
 
 Treat the course evidence as a closed book. Every claim in your answer must be
@@ -61,6 +79,10 @@ do not contain enough information for a useful explanation, say exactly:
 most two short paragraphs, then one brief check-understanding question. Do not
 include a Sources section because the application shows verified citations
 separately.
+{language_instruction}
+Make mathematical expressions human-readable. Prefer Unicode symbols and plainly written equations,
+for example “x² + y² = r²” and “(a + b) / c”. Never output raw LaTeX delimiters such as \\( \\),
+\\[ \\], dollar-sign math blocks, or unexplained backslash commands.
 
 COURSE EVIDENCE:
 {context}
@@ -118,11 +140,33 @@ def call_ollama_json(prompt: str) -> str:
     return answer
 
 
+def call_ollama_long(prompt: str) -> str:
+    """Generate a longer grounded lesson while keeping the model local and deterministic."""
+    endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
+    model = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
+    payload = json.dumps({
+        "model": model, "stream": False,
+        "messages": [{"role": "user", "content": prompt}],
+        "options": {"temperature": 0.1, "num_ctx": 8192, "num_predict": 1100},
+    }).encode("utf-8")
+    request = Request(endpoint, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urlopen(request, timeout=180) as response:  # nosec B310 - local configurable endpoint
+            body = json.loads(response.read().decode("utf-8"))
+    except (URLError, TimeoutError) as error:
+        raise RuntimeError("The local model did not finish the lesson. Try one material at a time.") from error
+    answer = body.get("message", {}).get("content", "").strip()
+    if not answer:
+        raise RuntimeError("The local tutor model returned an empty lesson.")
+    return answer
+
+
 def tutor_answer(
     question: str,
     chunks: list[KnowledgeChunk],
     *,
     generate: Callable[[str], str] = call_ollama,
+    language: str = "english",
 ) -> TutorReply:
     """Retrieve evidence and generate a grounded teaching response."""
     results = BM25Index(chunks).search(question, limit=4)
@@ -134,10 +178,10 @@ def tutor_answer(
             follow_up="Try asking about a topic or phrase that appears in this course.",
             coverage="not_covered",
         )
-    answer = generate(build_tutor_prompt(question, evidence))
+    answer = generate(build_tutor_prompt(question, evidence, language))
     return TutorReply(
         answer=answer,
-        citations=[_citation(chunk) for chunk in evidence],
+        citations=[citation_for_chunk(chunk) for chunk in evidence],
         follow_up="What part would you like to practise next?",
         coverage="course_backed",
     )

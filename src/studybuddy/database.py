@@ -48,6 +48,20 @@ class MaterialRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class ArchivedCourseRecord(Base):
+    __tablename__ = "archived_courses"
+
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), primary_key=True)
+    archived_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class ArchivedMaterialRecord(Base):
+    __tablename__ = "archived_materials"
+
+    source_id: Mapped[str] = mapped_column(ForeignKey("materials.id", ondelete="CASCADE"), primary_key=True)
+    archived_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 class ChunkRecord(Base):
     __tablename__ = "knowledge_chunks"
 
@@ -157,43 +171,57 @@ class StudyRepository:
 
     def latest_course_id(self) -> str | None:
         with Session(self.engine) as session:
-            return session.scalar(select(CourseRecord.id).order_by(CourseRecord.updated_at.desc()).limit(1))
+            return session.scalar(
+                select(CourseRecord.id)
+                .outerjoin(ArchivedCourseRecord, ArchivedCourseRecord.course_id == CourseRecord.id)
+                .where(ArchivedCourseRecord.course_id.is_(None))
+                .order_by(CourseRecord.updated_at.desc()).limit(1)
+            )
 
-    def list_courses(self) -> list[dict[str, object]]:
+    def list_courses(self, *, include_archived: bool = False) -> list[dict[str, object]]:
         with Session(self.engine) as session:
-            rows = session.execute(
-                select(
-                    CourseRecord,
-                    func.count(func.distinct(MaterialRecord.id)).label("source_count"),
-                    func.count(func.distinct(ChunkRecord.id)).label("chunk_count"),
-                )
-                .outerjoin(MaterialRecord, MaterialRecord.course_id == CourseRecord.id)
-                .outerjoin(ChunkRecord, ChunkRecord.course_id == CourseRecord.id)
-                .group_by(CourseRecord.id)
-                .order_by(CourseRecord.updated_at.desc())
-            ).all()
-            return [
-                {
+            query = select(CourseRecord, ArchivedCourseRecord.course_id).outerjoin(
+                ArchivedCourseRecord, ArchivedCourseRecord.course_id == CourseRecord.id,
+            ).order_by(CourseRecord.updated_at.desc())
+            if not include_archived:
+                query = query.where(ArchivedCourseRecord.course_id.is_(None))
+            rows = session.execute(query).all()
+            results = []
+            for course, archived_course_id in rows:
+                active_source_ids = session.scalars(
+                    select(MaterialRecord.id)
+                    .outerjoin(ArchivedMaterialRecord, ArchivedMaterialRecord.source_id == MaterialRecord.id)
+                    .where(MaterialRecord.course_id == course.id, ArchivedMaterialRecord.source_id.is_(None))
+                ).all()
+                chunk_count = session.scalar(
+                    select(func.count(ChunkRecord.id)).where(ChunkRecord.source_id.in_(active_source_ids))
+                ) if active_source_ids else 0
+                results.append({
                     "id": course.id,
                     "name": course.name,
-                    "source_count": source_count,
-                    "chunk_count": chunk_count,
+                    "source_count": len(active_source_ids),
+                    "chunk_count": chunk_count or 0,
                     "updated_at": course.updated_at.isoformat(),
-                }
-                for course, source_count, chunk_count in rows
-            ]
+                    "archived": archived_course_id is not None,
+                })
+            return results
 
-    def load_course(self, course_id: str) -> dict[str, object] | None:
+    def load_course(self, course_id: str, *, include_archived_materials: bool = False) -> dict[str, object] | None:
         with Session(self.engine) as session:
             course = session.get(CourseRecord, course_id)
             if course is None:
                 return None
-            materials = session.scalars(
-                select(MaterialRecord).where(MaterialRecord.course_id == course_id).order_by(MaterialRecord.created_at)
-            ).all()
-            chunk_rows = session.scalars(
-                select(ChunkRecord).where(ChunkRecord.course_id == course_id).order_by(ChunkRecord.position)
-            ).all()
+            material_query = select(MaterialRecord).where(MaterialRecord.course_id == course_id)
+            chunk_query = select(ChunkRecord).where(ChunkRecord.course_id == course_id)
+            if not include_archived_materials:
+                material_query = material_query.outerjoin(
+                    ArchivedMaterialRecord, ArchivedMaterialRecord.source_id == MaterialRecord.id,
+                ).where(ArchivedMaterialRecord.source_id.is_(None))
+                chunk_query = chunk_query.outerjoin(
+                    ArchivedMaterialRecord, ArchivedMaterialRecord.source_id == ChunkRecord.source_id,
+                ).where(ArchivedMaterialRecord.source_id.is_(None))
+            materials = session.scalars(material_query.order_by(MaterialRecord.created_at)).all()
+            chunk_rows = session.scalars(chunk_query.order_by(ChunkRecord.position)).all()
             return {
                 "id": course.id,
                 "name": course.name,
@@ -256,15 +284,15 @@ class StudyRepository:
             course.updated_at = utc_now()
             session.commit()
 
-    def delete_material(self, course_id: str, source_id: str) -> Path | None:
-        """Delete one material and its searchable chunks, returning its registered file path."""
+    def archive_material(self, course_id: str, source_id: str) -> Path | None:
+        """Hide one material from active study while preserving its file and all history."""
         with Session(self.engine) as session:
             material = session.get(MaterialRecord, source_id)
             if material is None or material.course_id != course_id:
                 raise ValueError("Study material not found in the active workspace.")
             stored_path = Path(material.stored_path) if material.stored_path else None
-            session.execute(delete(ChunkRecord).where(ChunkRecord.source_id == source_id))
-            session.delete(material)
+            if session.get(ArchivedMaterialRecord, source_id) is None:
+                session.add(ArchivedMaterialRecord(source_id=source_id))
             course = session.get(CourseRecord, course_id)
             if course:
                 course.course_map_json = None
@@ -272,39 +300,20 @@ class StudyRepository:
             session.commit()
         return stored_path
 
-    def delete_course(self, course_id: str) -> list[tuple[str, Path]]:
-        """Delete one complete workspace and return its registered source files."""
+    def archive_course(self, course_id: str) -> None:
+        """Hide a workspace from the active library while retaining every related record."""
         with Session(self.engine) as session:
             course = session.get(CourseRecord, course_id)
             if course is None:
                 raise ValueError("Course workspace not found.")
-            materials = session.scalars(
-                select(MaterialRecord).where(MaterialRecord.course_id == course_id)
-            ).all()
-            stored_files = [
-                (material.id, Path(material.stored_path))
-                for material in materials if material.stored_path
-            ]
-            conversation_ids = session.scalars(
-                select(ConversationRecord.id).where(ConversationRecord.course_id == course_id)
-            ).all()
-            assessment_ids = session.scalars(
-                select(AssessmentRecord.id).where(AssessmentRecord.course_id == course_id)
-            ).all()
-            if conversation_ids:
-                session.execute(delete(MessageRecord).where(MessageRecord.conversation_id.in_(conversation_ids)))
-            if assessment_ids:
-                session.execute(delete(StudentAnswerRecord).where(StudentAnswerRecord.assessment_id.in_(assessment_ids)))
-                session.execute(delete(AssessmentQuestionRecord).where(AssessmentQuestionRecord.assessment_id.in_(assessment_ids)))
-            session.execute(delete(AssessmentRecord).where(AssessmentRecord.course_id == course_id))
-            session.execute(delete(TopicMasteryRecord).where(TopicMasteryRecord.course_id == course_id))
-            session.execute(delete(ArtifactRecord).where(ArtifactRecord.course_id == course_id))
-            session.execute(delete(ConversationRecord).where(ConversationRecord.course_id == course_id))
-            session.execute(delete(ChunkRecord).where(ChunkRecord.course_id == course_id))
-            session.execute(delete(MaterialRecord).where(MaterialRecord.course_id == course_id))
-            session.delete(course)
+            if session.get(ArchivedCourseRecord, course_id) is None:
+                session.add(ArchivedCourseRecord(course_id=course_id))
             session.commit()
-        return stored_files
+
+    def material_file(self, source_id: str) -> Path | None:
+        with Session(self.engine) as session:
+            material = session.get(MaterialRecord, source_id)
+            return Path(material.stored_path) if material and material.stored_path else None
 
     def save_course_map(self, course_id: str, course_map: CourseMap) -> str:
         artifact_id = uuid4().hex
@@ -410,17 +419,19 @@ class StudyRepository:
             if course_id:
                 query = query.where(ArtifactRecord.course_id == course_id)
             rows = session.execute(query.order_by(ArtifactRecord.created_at.desc())).all()
-            return [
-                {
+            results = []
+            for artifact, course_name in rows:
+                content = json.loads(artifact.content_json)
+                results.append({
                     "id": artifact.id,
                     "course_id": artifact.course_id,
                     "course_name": course_name,
                     "kind": artifact.kind,
                     "title": artifact.title,
                     "created_at": artifact.created_at.isoformat(),
-                }
-                for artifact, course_name in rows
-            ]
+                    "concept_count": len(content.get("concepts", [])) if artifact.kind == "study_guide" else None,
+                })
+            return results
 
     def get_artifact(self, artifact_id: str) -> dict[str, object] | None:
         with Session(self.engine) as session:
@@ -429,6 +440,8 @@ class StudyRepository:
                 return None
             return {
                 "id": artifact.id,
+                "course_id": artifact.course_id,
+                "created_at": artifact.created_at.isoformat(),
                 "title": artifact.title,
                 "kind": artifact.kind,
                 "content": json.loads(artifact.content_json),

@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from studybuddy.course_map import CourseMap
 from studybuddy.database import StudyRepository
+from studybuddy.exports import export_response
 from studybuddy.assessment import (
     AssessmentQuestion,
     generate_assessment,
@@ -35,7 +36,8 @@ from studybuddy.ingestion.web import fetch_public_resource, ingest_web_page, is_
 from studybuddy.ingestion.youtube import download_youtube_audio
 from studybuddy.retrieval.bm25 import BM25Index
 from studybuddy.tutor.course_map_generator import generate_course_map
-from studybuddy.tutor.grounded import call_ollama_json, tutor_answer
+from studybuddy.tutor.grounded import call_ollama_json, call_ollama_long, ollama_available, tutor_answer
+from studybuddy.tutor.material_overview import generate_material_overview
 
 
 UPLOAD_ROOT = Path("data/uploads")
@@ -51,6 +53,7 @@ class Workspace:
     guide_job: dict[str, object] | None = None
     guide_source_ids: list[str] = field(default_factory=list)
     guide_evidence: dict[str, KnowledgeChunk] = field(default_factory=dict)
+    overview_job: dict[str, object] | None = None
 
 
 repository = StudyRepository()
@@ -79,6 +82,8 @@ def load_or_create_workspace() -> Workspace:
 
 workspace = load_or_create_workspace()
 guide_executor = ThreadPoolExecutor(max_workers=1)
+overview_executor = ThreadPoolExecutor(max_workers=1)
+overview_jobs: dict[str, dict[str, object]] = {}
 app = FastAPI(title="ConceptFlow API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
@@ -101,6 +106,7 @@ class SearchRequest(BaseModel):
 class TutorRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
     conversation_id: str | None = None
+    language: Literal["english", "hindi", "hinglish"] = "english"
 
 
 class UrlMaterialRequest(BaseModel):
@@ -111,15 +117,23 @@ class GuideRequest(BaseModel):
     source_ids: list[str] = Field(default_factory=list, max_length=100)
 
 
+class OverviewRequest(BaseModel):
+    source_ids: list[str] = Field(default_factory=list, max_length=100)
+    language: Literal["english", "hindi", "hinglish"] = "english"
+
+
 class AssessmentCreateRequest(BaseModel):
     scope: list[str] = Field(default_factory=list, max_length=12)
     question_count: int = Field(default=5, ge=1, le=12)
     difficulty: Literal["easy", "medium", "hard"] = "medium"
-    question_types: list[Literal["mcq", "short_answer", "numerical"]] = Field(min_length=1)
+    question_types: list[Literal["mcq", "short_answer", "numerical", "true_false", "fill_blank"]] = Field(min_length=1)
 
 
 class AssessmentSubmitRequest(BaseModel):
     answers: dict[str, str]
+
+
+DownloadFormat = Literal["md", "txt", "pdf", "docx", "json"]
 
 
 def add_indexed_material(
@@ -176,10 +190,17 @@ def selected_guide_chunks(source_ids: list[str]) -> list[KnowledgeChunk]:
     return chunks
 
 
-def course_map_view(course_map: CourseMap) -> dict[str, object]:
+def course_map_view(
+    course_map: CourseMap,
+    *,
+    chunks: list[KnowledgeChunk] | None = None,
+    selected_source_ids: list[str] | None = None,
+) -> dict[str, object]:
     """Enrich a map with human-readable evidence and a useful learning route."""
-    chunks_by_id = {chunk.chunk_id: chunk for chunk in workspace.chunks}
-    chunks_by_id.update(workspace.guide_evidence)
+    available_chunks = list(chunks) if chunks is not None else list(workspace.chunks)
+    chunks_by_id = {chunk.chunk_id: chunk for chunk in available_chunks}
+    if chunks is None:
+        chunks_by_id.update(workspace.guide_evidence)
     order = course_map.learning_order()
     concepts = []
     for concept_id in order:
@@ -205,11 +226,14 @@ def course_map_view(course_map: CourseMap) -> dict[str, object]:
                 ],
             }
         )
-    selected_ids = set(workspace.guide_source_ids)
+    selected_ids = set(workspace.guide_source_ids if selected_source_ids is None else selected_source_ids)
     scoped_chunks = [
-        chunk for chunk in workspace.chunks
+        chunk for chunk in available_chunks
         if not selected_ids or chunk.citation.source_id in selected_ids
     ]
+    source_names = {}
+    for chunk in chunks_by_id.values():
+        source_names.setdefault(chunk.citation.source_id, chunk.citation.source_name)
     return {
         "title": course_map.title,
         "concepts": concepts,
@@ -222,11 +246,8 @@ def course_map_view(course_map: CourseMap) -> dict[str, object]:
             "mapped_chunks": len({cid for concept in course_map.concepts for cid in concept.evidence_chunk_ids}),
             "scope": "Indexed text, transcripts, web content, and locally interpreted visual material.",
         },
-        "selected_source_ids": list(workspace.guide_source_ids),
-        "selected_source_names": [
-            str(source["name"]) for source in workspace.sources
-            if str(source["id"]) in selected_ids
-        ],
+        "selected_source_ids": list(selected_ids),
+        "selected_source_names": [source_names[source_id] for source_id in selected_ids if source_id in source_names],
     }
 
 
@@ -326,14 +347,13 @@ def remove_registered_source_files(files: list[tuple[str, Path]]) -> None:
 
 @app.delete("/api/courses/{course_id}")
 def delete_course(course_id: str) -> dict[str, object]:
-    """Permanently remove one workspace and activate a safe remaining workspace."""
+    """Archive a workspace from active study while preserving all of its history."""
     global workspace
     deleting_active = workspace.course_id == course_id
     try:
-        files = repository.delete_course(course_id)
+        repository.archive_course(course_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
-    remove_registered_source_files(files)
     if deleting_active:
         next_course_id = repository.latest_course_id()
         if next_course_id is None:
@@ -432,8 +452,8 @@ def import_material_url(request: UrlMaterialRequest) -> dict[str, object]:
 
 @app.get("/api/sources/{source_id}")
 def open_source(source_id: str, download: bool = False) -> FileResponse:
-    """Serve only a registered file in this workspace, never a caller-supplied path."""
-    path = workspace.source_files.get(source_id)
+    """Serve a registered active or archived source, never a caller-supplied path."""
+    path = workspace.source_files.get(source_id) or repository.material_file(source_id)
     if path is None or not path.is_file():
         raise HTTPException(status_code=404, detail="Source unavailable. Upload the original material again.")
     media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
@@ -445,15 +465,14 @@ def open_source(source_id: str, download: bool = False) -> FileResponse:
 
 @app.delete("/api/materials/{source_id}")
 def delete_material(source_id: str) -> dict[str, object]:
-    """Remove one source and its chunks from only the active course."""
+    """Archive one source from active study while retaining generated work and citations."""
     source = next((item for item in workspace.sources if item["id"] == source_id), None)
     if source is None:
         raise HTTPException(status_code=404, detail="Study material not found in the active workspace.")
     try:
-        stored_path = repository.delete_material(workspace.course_id, source_id)
+        repository.archive_material(workspace.course_id, source_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
-    remove_registered_source_files([(source_id, stored_path)] if stored_path else [])
     workspace.sources = [item for item in workspace.sources if item["id"] != source_id]
     workspace.chunks = [chunk for chunk in workspace.chunks if chunk.citation.source_id != source_id]
     workspace.source_files.pop(source_id, None)
@@ -461,7 +480,7 @@ def delete_material(source_id: str) -> dict[str, object]:
     workspace.guide_source_ids = []
     workspace.revision = uuid4().hex
     workspace.guide_job = None
-    return {"deleted": {"id": source_id, "name": source["name"]}, "workspace": workspace_summary()}
+    return {"archived": {"id": source_id, "name": source["name"]}, "workspace": workspace_summary()}
 
 
 def compact_transcript_chunks(
@@ -553,6 +572,34 @@ def study_guide_status() -> dict[str, object]:
     return {"job": dict(workspace.guide_job) if workspace.guide_job else None}
 
 
+@app.get("/api/study-guides")
+def list_study_guides() -> dict[str, object]:
+    return {"guides": [
+        artifact for artifact in repository.list_artifacts(workspace.course_id)
+        if artifact["kind"] == "study_guide"
+    ]}
+
+
+@app.get("/api/study-guides/{artifact_id}")
+def get_study_guide(artifact_id: str) -> dict[str, object]:
+    artifact = repository.get_artifact(artifact_id)
+    if artifact is None or artifact["kind"] != "study_guide":
+        raise HTTPException(status_code=404, detail="Saved study guide not found.")
+    record = repository.load_course(str(artifact["course_id"]), include_archived_materials=True)
+    if record is None:
+        raise HTTPException(status_code=404, detail="The guide's workspace no longer exists.")
+    course_map = CourseMap.model_validate(artifact["content"])
+    evidence_ids = {cid for concept in course_map.concepts for cid in concept.evidence_chunk_ids}
+    all_chunks = list(record["chunks"])
+    source_ids = list(dict.fromkeys(
+        chunk.citation.source_id for chunk in all_chunks if chunk.chunk_id in evidence_ids
+    ))
+    return {
+        "artifact": {key: artifact[key] for key in ("id", "title", "created_at")},
+        "course_map": course_map_view(course_map, chunks=all_chunks, selected_source_ids=source_ids),
+    }
+
+
 @app.get("/api/course-map")
 def get_course_map() -> dict[str, object]:
     """Return the current validated map, if a learner has generated one."""
@@ -611,7 +658,7 @@ def teach_course(request: TutorRequest) -> dict[str, object]:
     if not workspace.chunks:
         raise HTTPException(status_code=400, detail="Upload and index study material before asking the tutor.")
     try:
-        reply = tutor_answer(request.question, workspace.chunks)
+        reply = tutor_answer(request.question, workspace.chunks, language=request.language)
     except RuntimeError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
     response_metadata = {
@@ -633,6 +680,60 @@ def teach_course(request: TutorRequest) -> dict[str, object]:
         "coverage": reply.coverage,
         "conversation_id": conversation_id,
     }
+
+
+def run_overview_job(
+    job: dict[str, object], course_id: str, revision: str, title: str,
+    chunks: list[KnowledgeChunk], source_names: list[str], language: str,
+) -> None:
+    def progress(completed: int, total: int) -> None:
+        job.update(completed_batches=completed, total_batches=total)
+    try:
+        lesson = generate_material_overview(
+            title, chunks, generate=call_ollama_long, on_progress=progress,
+            model_available=ollama_available(), language=language,
+        )
+        question = "Teach me everything in " + (", ".join(source_names) if source_names else title)
+        conversation_id = repository.save_chat_exchange(
+            course_id=course_id, question=question, answer=str(lesson["answer"]),
+            response_metadata={
+                "citations": lesson["citations"], "follow_up": lesson["follow_up"],
+                "coverage": lesson["coverage"], "mode": "full_material_lesson",
+            },
+        )
+        job.update(status="complete", result={**lesson, "conversation_id": conversation_id})
+    except Exception as error:
+        job.update(status="failed", error=str(error))
+
+
+@app.post("/api/tutor/overview", status_code=202)
+def start_material_overview(request: OverviewRequest) -> dict[str, object]:
+    if workspace.overview_job and workspace.overview_job.get("status") == "running":
+        return {"job": dict(workspace.overview_job)}
+    source_ids = list(dict.fromkeys(request.source_ids))
+    try:
+        raw_chunks = selected_guide_chunks(source_ids)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    chunks = compact_transcript_chunks(raw_chunks, max_characters=1400)
+    names = [str(source["name"]) for source in workspace.sources if not source_ids or source["id"] in source_ids]
+    job: dict[str, object] = {
+        "job_id": uuid4().hex, "status": "running", "completed_batches": 0,
+        "total_batches": 0, "source_ids": source_ids, "language": request.language,
+    }
+    workspace.overview_job = job
+    overview_jobs[str(job["job_id"])] = job
+    overview_executor.submit(
+        run_overview_job, job, workspace.course_id, workspace.revision,
+        workspace.name, chunks, names, request.language,
+    )
+    return {"job": dict(job)}
+
+
+@app.get("/api/tutor/overview/status")
+def material_overview_status(job_id: str | None = None) -> dict[str, object]:
+    job = overview_jobs.get(job_id) if job_id else workspace.overview_job
+    return {"job": dict(job) if job else None}
 
 
 @app.post("/api/assessments", status_code=201)
@@ -675,6 +776,32 @@ def list_assessments() -> dict[str, object]:
 @app.get("/api/progress")
 def get_progress() -> dict[str, object]:
     return repository.progress_summary(workspace.course_id)
+
+
+@app.get("/api/progress/all")
+def get_all_progress() -> dict[str, object]:
+    """Expose small per-workspace summaries so saved work never appears to vanish."""
+    summaries = []
+    for course in repository.list_courses():
+        summary = repository.progress_summary(str(course["id"]))
+        summaries.append({"course_id": course["id"], "course_name": course["name"], **summary})
+    return {"workspaces": summaries}
+
+
+@app.get("/api/flashcards/download")
+def download_flashcards(format: DownloadFormat = "pdf") -> Response:
+    if workspace.course_map is None:
+        raise HTTPException(status_code=404, detail="Generate a Learning Flow before downloading flashcards.")
+    sections = []
+    for number, concept in enumerate(workspace.course_map.concepts, start=1):
+        paragraphs = [f"Question: Explain {concept.name}", f"Answer: {concept.description}"]
+        paragraphs.extend(f"- {point}" for point in concept.key_points)
+        paragraphs.extend(f"- Evidence ID: {chunk_id}" for chunk_id in concept.evidence_chunk_ids)
+        sections.append((f"Flashcard {number} · {concept.topic}", paragraphs))
+    return export_response(
+        title=f"{workspace.name} flashcards", sections=sections, format=format,
+        structured={"course": workspace.name, "flashcards": [concept.model_dump() for concept in workspace.course_map.concepts]},
+    )
 
 
 @app.get("/api/assessments/{assessment_id}")
@@ -755,29 +882,88 @@ def submit_assessment(assessment_id: str, request: AssessmentSubmitRequest) -> d
     return {"report": report, "artifact_id": artifact_id, "mastery": repository.topic_masteries(str(record["course_id"]))}
 
 
-@app.get("/api/assessments/{assessment_id}/download")
-def download_assessment(assessment_id: str) -> Response:
-    record = repository.get_assessment(assessment_id)
-    if record is None or record["report"] is None:
-        raise HTTPException(status_code=404, detail="Complete the assessment before downloading its report.")
-    report = record["report"]
-    lines = [f"# {report['title']}", "", f"Course: {report['course_name']}", f"Score: {report['percentage']}%", ""]
-    if report["weak_topics"]:
-        lines.extend(["## Weak topics", "", *[f"- {topic}" for topic in report["weak_topics"]], ""])
-    lines.extend(["## Question feedback", ""])
-    for number, item in enumerate(report["feedback"], start=1):
-        lines.extend([
-            f"### {number}. {item['prompt']}", "",
-            f"Your answer: {item['response'] or '(no answer)'}", f"Correct answer: {item['correct_answer']}",
-            f"Result: {'Correct' if item['correct'] else 'Needs review'}", item["feedback"],
+def assessment_export_sections(record: dict[str, object]) -> list[tuple[str, list[str]]]:
+    report = record.get("report")
+    sections: list[tuple[str, list[str]]] = [("Assessment details", [
+        f"Status: {record['status']}",
+        f"Difficulty: {record['config'].get('difficulty', 'mixed')}",
+        f"Question count: {len(record['questions'])}",
+    ])]
+    if report:
+        sections[0][1].extend([
+            f"Course: {report['course_name']}", f"Score: {report['percentage']}%",
+            "Weak topics: " + (", ".join(report["weak_topics"]) or "None identified"),
         ])
-        lines.extend(f"- Source: {citation['label']}" for citation in item["citations"])
-        lines.append("")
-    return Response(
-        "\n".join(lines),
-        media_type="text/markdown",
-        headers={"Content-Disposition": f'attachment; filename="conceptflow-assessment-{assessment_id[:8]}.md"'},
-    )
+        for number, item in enumerate(report["feedback"], start=1):
+            paragraphs = [
+                f"Topic: {item['topic']}", f"Question: {item['prompt']}",
+                f"Your answer: {item['response'] or '(no answer)'}",
+                f"Correct answer: {item['correct_answer']}",
+                f"Result: {'Correct' if item['correct'] else 'Needs review'}",
+                f"Feedback: {item['feedback']}",
+            ]
+            if item.get("misconception"):
+                paragraphs.append(f"Likely misconception: {item['misconception']}")
+            paragraphs.extend(f"- Source: {citation['label']}" for citation in item.get("citations", []))
+            sections.append((f"Question {number}", paragraphs))
+    else:
+        for number, question in enumerate(record["questions"], start=1):
+            paragraphs = [
+                f"Topic: {question.topic}", f"Difficulty: {question.difficulty}",
+                f"Type: {question.question_type.replace('_', ' ')}", question.prompt,
+            ]
+            paragraphs.extend(f"- {option}" for option in question.options)
+            sections.append((f"Question {number}", paragraphs))
+    return sections
+
+
+def course_map_export_sections(content: dict[str, object], view: str) -> list[tuple[str, list[str]]]:
+    concepts = content.get("concepts", [])
+    sections: list[tuple[str, list[str]]] = []
+    for number, concept in enumerate(concepts, start=1):
+        paragraphs = [f"Topic: {concept['topic']}", str(concept["description"])]
+        if view == "learning":
+            paragraphs.extend(f"{index}. {step}" for index, step in enumerate(concept.get("study_steps", []), start=1))
+        else:
+            paragraphs.extend(f"- {point}" for point in concept.get("key_points", []))
+        paragraphs.extend(f"- Evidence ID: {chunk_id}" for chunk_id in concept.get("evidence_chunk_ids", []))
+        sections.append((f"{number}. {concept['name']}", paragraphs))
+    return sections
+
+
+def generated_artifact_sections(artifact: dict[str, object], view: str) -> list[tuple[str, list[str]]]:
+    content = artifact["content"]
+    if artifact["kind"] == "study_guide":
+        return course_map_export_sections(content, view)
+    if artifact["kind"] == "assessment_report":
+        sections = [("Result", [
+            f"Score: {content.get('percentage', 'Not available')}%",
+            "Weak topics: " + (", ".join(content.get("weak_topics", [])) or "None identified"),
+        ])]
+        for number, item in enumerate(content.get("feedback", []), start=1):
+            sections.append((f"Question {number}", [
+                item.get("prompt", ""), f"Your answer: {item.get('response') or '(no answer)'}",
+                f"Correct answer: {item.get('correct_answer', '')}", item.get("feedback", ""),
+            ]))
+        return sections
+    return [("Saved data", [json.dumps(content, indent=2, ensure_ascii=False)])]
+
+
+@app.get("/api/assessments/{assessment_id}/download")
+def download_assessment(assessment_id: str, format: DownloadFormat = "md") -> Response:
+    record = repository.get_assessment(assessment_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Assessment not found.")
+    try:
+        return export_response(
+            title=str(record["title"]), sections=assessment_export_sections(record),
+            format=format, structured={
+                **{key: value for key, value in record.items() if key != "questions"},
+                "questions": [question.model_dump() for question in record["questions"]],
+            },
+        )
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
 
 @app.get("/api/history")
@@ -786,6 +972,7 @@ def history() -> dict[str, object]:
         "conversations": repository.list_conversations(),
         "artifacts": repository.list_artifacts(),
         "assessments": repository.list_assessments(),
+        "archived_courses": [course for course in repository.list_courses(include_archived=True) if course["archived"]],
     }
 
 
@@ -798,36 +985,41 @@ def get_conversation(conversation_id: str) -> dict[str, object]:
 
 
 @app.get("/api/conversations/{conversation_id}/download")
-def download_conversation(conversation_id: str) -> Response:
+def download_conversation(conversation_id: str, format: DownloadFormat = "md") -> Response:
     conversation = repository.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found.")
-    lines = [f"# {conversation['title']}", ""]
+    sections = []
     for message in conversation["messages"]:
         speaker = "You" if message["role"] == "user" else "ConceptFlow"
-        lines.extend([f"## {speaker}", "", str(message["content"]), ""])
+        paragraphs = [str(message["content"])]
         metadata = message.get("metadata", {})
         for citation in metadata.get("citations", []):
-            lines.append(f"- Source: {citation.get('label', citation.get('source_name', 'Course material'))}")
-        if metadata.get("citations"):
-            lines.append("")
-    filename = f"conceptflow-chat-{conversation_id[:8]}.md"
-    return Response(
-        "\n".join(lines),
-        media_type="text/markdown",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+            paragraphs.append(f"- Source: {citation.get('label', citation.get('source_name', 'Course material'))}")
+        sections.append((speaker, paragraphs))
+    try:
+        return export_response(
+            title=str(conversation["title"]), sections=sections, format=format, structured=conversation,
+        )
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
 
 @app.get("/api/artifacts/{artifact_id}/download")
-def download_artifact(artifact_id: str) -> Response:
+def download_artifact(
+    artifact_id: str, format: DownloadFormat = "json",
+    view: Literal["learning", "revision"] = "learning",
+) -> Response:
     artifact = repository.get_artifact(artifact_id)
     if artifact is None:
         raise HTTPException(status_code=404, detail="Generated item not found.")
-    body = json.dumps(artifact["content"], indent=2, ensure_ascii=False)
-    filename = f"conceptflow-{artifact['kind']}-{artifact_id[:8]}.json"
-    return Response(
-        body,
-        media_type="application/json",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    title = str(artifact["title"])
+    if artifact["kind"] == "study_guide":
+        title = f"{title} - {'Learning Flow' if view == 'learning' else 'Revision Mind Map'}"
+    try:
+        return export_response(
+            title=title, sections=generated_artifact_sections(artifact, view),
+            format=format, structured=artifact["content"],
+        )
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error

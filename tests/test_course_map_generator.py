@@ -141,3 +141,18 @@ def test_incomplete_generation_keeps_missed_chunks_as_cited_source_summaries() -
     assert fallback.topic == "Additional source material"
     assert "DBMS notes, PDF page 4" in fallback.name
     assert fallback.study_steps
+
+
+def test_offline_generation_creates_cited_flashcard_ready_concepts() -> None:
+    chunk = _chunk("offline-topic", "Gradient descent updates parameters to reduce a loss function. It follows the negative gradient.")
+
+    def unavailable(_prompt):
+        raise RuntimeError("Ollama is unavailable")
+
+    course = generate_course_map("ML notes", [chunk], generate_json=unavailable)
+
+    assert len(course.concepts) == 1
+    assert course.concepts[0].topic == "DBMS notes"
+    assert course.concepts[0].evidence_chunk_ids == ["offline-topic"]
+    assert "Gradient descent" in course.concepts[0].name
+    assert course.concepts[0].key_points

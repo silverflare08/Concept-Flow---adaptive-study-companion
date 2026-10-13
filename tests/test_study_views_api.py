@@ -55,7 +55,7 @@ def test_guide_scope_uses_only_selected_material(monkeypatch):
     assert [item.chunk_id for item in selected] == ["page-20"]
 
 
-def test_delete_material_removes_only_that_source(monkeypatch, tmp_path: Path):
+def test_delete_material_archives_source_and_keeps_original_file(monkeypatch, tmp_path: Path):
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
     repository = StudyRepository(tmp_path / "test.db")
@@ -75,10 +75,11 @@ def test_delete_material_removes_only_that_source(monkeypatch, tmp_path: Path):
     assert response.status_code == 200
     assert response.json()["workspace"]["source_count"] == 0
     assert repository.load_course(course_id)["chunks"] == []
-    assert not source_file.exists()
+    assert repository.load_course(course_id, include_archived_materials=True)["chunks"]
+    assert source_file.exists()
 
 
-def test_delete_active_workspace_activates_a_remaining_course(monkeypatch, tmp_path: Path):
+def test_archive_active_workspace_activates_a_remaining_course(monkeypatch, tmp_path: Path):
     repository = StudyRepository(tmp_path / "test.db")
     kept_id = repository.create_course("Keep me")
     deleted_id = repository.create_course("Delete me")
@@ -88,9 +89,29 @@ def test_delete_active_workspace_activates_a_remaining_course(monkeypatch, tmp_p
 
     result = api.delete_course(deleted_id)
 
-    assert repository.load_course(deleted_id) is None
+    assert repository.load_course(deleted_id) is not None
+    assert deleted_id not in [course["id"] for course in repository.list_courses()]
     assert result["workspace"]["id"] == kept_id
     assert result["workspace"]["name"] == "Keep me"
+
+
+def test_saved_guide_can_preview_archived_source_evidence(monkeypatch, tmp_path: Path):
+    repository = StudyRepository(tmp_path / "test.db")
+    course_id = repository.create_course("Biology")
+    source_file = tmp_path / "Biology.pdf"
+    source_file.write_bytes(b"local source")
+    repository.save_material(
+        course_id=course_id, source_id="notes", name="Biology.pdf", kind="pdf",
+        chunks=[chunk()], stored_path=source_file, source_uri="/api/sources/notes",
+    )
+    artifact_id = repository.save_course_map(course_id, guide())
+    repository.archive_material(course_id, "notes")
+    monkeypatch.setattr(api, "repository", repository)
+
+    saved = api.get_study_guide(artifact_id)
+
+    assert saved["course_map"]["concepts"][0]["evidence"][0]["page"] == 12
+    assert saved["course_map"]["selected_source_names"] == ["Biology.pdf"]
 
 
 def test_transcript_chunks_are_compacted_for_fast_map_generation():
@@ -109,6 +130,16 @@ def test_transcript_chunks_are_compacted_for_fast_map_generation():
     assert sum(item.token_count for item in compacted) == sum(item.token_count for item in chunks)
     assert compacted[0].citation.start_seconds == 0
     assert compacted[-1].citation.end_seconds == 100
+
+
+def test_flashcards_download_is_derived_from_validated_course_concepts(monkeypatch):
+    monkeypatch.setattr(api, "workspace", api.Workspace(name="Biology", course_map=guide()))
+
+    response = api.download_flashcards(format="txt")
+
+    assert b"Question: Explain Cells" in response.body
+    assert b"Answer:" in response.body
+    assert response.headers["content-disposition"].endswith('filename="biology-flashcards.txt"')
 
 
 def test_source_route_rejects_unregistered_paths(monkeypatch):

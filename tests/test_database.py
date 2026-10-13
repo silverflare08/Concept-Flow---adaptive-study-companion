@@ -46,11 +46,15 @@ def test_course_sources_and_chunks_survive_repository_restart(tmp_path: Path) ->
     assert restored["chunks"][0].text.startswith("Gradient descent")
     assert restored["source_files"]["source-1"] == source_file
 
-    deleted_path = restarted_repository.delete_material(course_id, "source-1")
-    after_delete = restarted_repository.load_course(course_id)
-    assert deleted_path == source_file
-    assert after_delete["sources"] == []
-    assert after_delete["chunks"] == []
+    archived_path = restarted_repository.archive_material(course_id, "source-1")
+    active_view = restarted_repository.load_course(course_id)
+    historical_view = restarted_repository.load_course(course_id, include_archived_materials=True)
+    assert archived_path == source_file
+    assert active_view["sources"] == []
+    assert active_view["chunks"] == []
+    assert historical_view["sources"][0]["id"] == "source-1"
+    assert historical_view["chunks"][0].text.startswith("Gradient descent")
+    assert source_file.exists()
 
 
 def test_chat_and_generated_artifact_are_persistent_and_downloadable(tmp_path: Path) -> None:
@@ -87,7 +91,7 @@ def test_chat_and_generated_artifact_are_persistent_and_downloadable(tmp_path: P
     assert artifact["content"]["title"] == "Linear Algebra"
 
 
-def test_deleting_course_removes_its_records_but_not_other_courses(tmp_path: Path) -> None:
+def test_archiving_course_preserves_its_records_but_hides_it_from_active_courses(tmp_path: Path) -> None:
     repository = StudyRepository(tmp_path / "conceptflow.db")
     deleted_id = repository.create_course("Delete me")
     kept_id = repository.create_course("Keep me")
@@ -98,10 +102,15 @@ def test_deleting_course_removes_its_records_but_not_other_courses(tmp_path: Pat
         chunks=[sample_chunk()], stored_path=source_file, source_uri=None,
     )
 
-    files = repository.delete_course(deleted_id)
+    conversation_id = repository.save_chat_exchange(
+        course_id=deleted_id, question="Explain notes", answer="Saved answer", response_metadata={},
+    )
+    repository.archive_course(deleted_id)
 
-    assert files == [("source-1", source_file)]
-    assert repository.load_course(deleted_id) is None
+    assert [course["id"] for course in repository.list_courses()] == [kept_id]
+    assert repository.load_course(deleted_id, include_archived_materials=True)["name"] == "Delete me"
+    assert repository.get_conversation(conversation_id)["messages"][1]["content"] == "Saved answer"
+    assert source_file.exists()
     assert repository.load_course(kept_id)["name"] == "Keep me"
 
 
