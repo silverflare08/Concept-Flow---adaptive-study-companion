@@ -11,6 +11,7 @@ import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+from contextlib import nullcontext
 
 from pypdf import PdfReader
 
@@ -66,34 +67,41 @@ def ingest_pdf(
     segments: list[SourceSegment] = []
     extracted_images: list[Path] = []
 
-    for page_number, page in enumerate(reader.pages, start=1):
-        anchor = CitationAnchor(
-            source_id=source_id,
-            source_name=source_name,
-            source_type=SourceType.PDF,
-            source_uri=source_uri,
-            page=page_number,
-        )
-        text = (page.extract_text() or "").strip()
-        # Scanner PDFs often have no text layer, or only a page header. Render
-        # the entire page to preserve handwriting, tiled scans and annotations.
-        scan_path = None
-        if describe_image is not None:
-            try:
-                import pymupdf
-            except ImportError as error:
-                raise RuntimeError("Scanned PDF support needs PyMuPDF. Install the ingestion dependencies: pip install -e '.[ingestion]'") from error
-            with pymupdf.open(str(pdf_path)) as rendered_document:
+    pymupdf_module = None
+    rendered_context = nullcontext(None)
+    if describe_image is not None:
+        try:
+            import pymupdf as pymupdf_module
+        except ImportError as error:
+            raise RuntimeError("Scanned PDF support needs PyMuPDF. Install the ingestion dependencies: pip install -e '.[ingestion]'") from error
+        # Open the rendering document once. Reopening it for every page made
+        # ordinary multi-page PDFs pay a large repeated parsing cost.
+        rendered_context = pymupdf_module.open(str(pdf_path))
+
+    with rendered_context as rendered_document:
+        for page_number, page in enumerate(reader.pages, start=1):
+            anchor = CitationAnchor(
+                source_id=source_id,
+                source_name=source_name,
+                source_type=SourceType.PDF,
+                source_uri=source_uri,
+                page=page_number,
+            )
+            text = (page.extract_text() or "").strip()
+            # Scanner PDFs often have no text layer, or only a page header. Render
+            # the entire page to preserve handwriting, tiled scans and annotations.
+            scan_path = None
+            if rendered_document is not None:
                 rendered_page = rendered_document[page_number - 1]
                 page_area = max(rendered_page.rect.get_area(), 1)
-                raster_area = sum(pymupdf.Rect(image["bbox"]).get_area() for image in rendered_page.get_image_info())
+                raster_area = sum(pymupdf_module.Rect(image["bbox"]).get_area() for image in rendered_page.get_image_info())
                 needs_vision = not text or raster_area / page_area > 0.5
                 if needs_vision:
                     image_dir.mkdir(parents=True, exist_ok=True)
                     scan_path = image_dir / f"{source_id}-p{page_number}-scan.png"
                     # Keep handwriting readable without sending huge camera scans.
                     scale = min(2.5, 2400 / max(rendered_page.rect.width, rendered_page.rect.height))
-                    pixmap = rendered_page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), alpha=False)
+                    pixmap = rendered_page.get_pixmap(matrix=pymupdf_module.Matrix(scale, scale), alpha=False)
                     pixmap.save(str(scan_path))
             if scan_path is not None:
                 extracted_images.append(scan_path)
@@ -110,27 +118,27 @@ def ingest_pdf(
                 # Full-page transcription includes the visible text and images;
                 # avoid sending the same scan through vision a second time.
                 continue
-        if text:
-            segments.append(SourceSegment(text=text, citation=anchor, evidence_kind=EvidenceKind.TEXT))
+            if text:
+                segments.append(SourceSegment(text=text, citation=anchor, evidence_kind=EvidenceKind.TEXT))
 
-        for image_index, image in enumerate(page.images, start=1):
-            image_dir.mkdir(parents=True, exist_ok=True)
-            output = image_dir / f"{source_id}-p{page_number}-img{image_index}{_safe_image_extension(image.name)}"
-            output.write_bytes(image.data)
-            extracted_images.append(output)
+            for image_index, image in enumerate(page.images, start=1):
+                image_dir.mkdir(parents=True, exist_ok=True)
+                output = image_dir / f"{source_id}-p{page_number}-img{image_index}{_safe_image_extension(image.name)}"
+                output.write_bytes(image.data)
+                extracted_images.append(output)
 
-            if describe_image is None:
-                continue
-            description = describe_image(output)
-            if description and description.strip():
-                segments.append(
-                    SourceSegment(
-                        text=description.strip(),
-                        citation=anchor,
-                        evidence_kind=EvidenceKind.FIGURE_DESCRIPTION,
-                        image_path=str(output),
+                if describe_image is None:
+                    continue
+                description = describe_image(output)
+                if description and description.strip():
+                    segments.append(
+                        SourceSegment(
+                            text=description.strip(),
+                            citation=anchor,
+                            evidence_kind=EvidenceKind.FIGURE_DESCRIPTION,
+                            image_path=str(output),
+                        )
                     )
-                )
 
     return PdfIngestionResult(
         source_id=source_id,

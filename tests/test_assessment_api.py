@@ -88,3 +88,30 @@ def test_additional_objective_assessment_types_are_valid_and_gradeable() -> None
 
     assert api.grade_objective(true_false, "true").correct is True
     assert api.grade_objective(fill_blank, "Negative").correct is True
+
+
+def test_recall_fallback_can_be_completed_and_updates_saved_progress(monkeypatch, tmp_path):
+    repository = StudyRepository(tmp_path / "practice.db")
+    course_id = repository.create_course("Mechanics")
+    text = " ".join(f"Experiment {index} measures temperature changes in heated metal samples after {index + 10} minutes." for index in range(1, 9))
+    chunk = KnowledgeChunk(chunk_id="mechanics-1", text=text, token_count=len(text.split()),
+        citation=CitationAnchor(source_id="source-1", source_name="Notes.txt", source_type=SourceType.DOCUMENT, section="Experiments"))
+    repository.save_material(course_id=course_id, source_id="source-1", name="Notes.txt", kind="document",
+        chunks=[chunk], stored_path=None, source_uri=None)
+    monkeypatch.setattr(api, "repository", repository)
+    monkeypatch.setattr(api, "workspace", api.workspace_from_record(repository.load_course(course_id)))
+    def offline(prompt):
+        raise RuntimeError("Model unavailable")
+    monkeypatch.setattr(api, "call_ollama_json", offline)
+    created = api.create_assessment(api.AssessmentCreateRequest(question_count=12,
+        question_types=["mcq", "short_answer", "numerical", "true_false", "fill_blank"]))
+    record = repository.get_assessment(created["id"])
+    answers = {question.question_id: question.correct_answer for question in record["questions"]}
+    submitted = api.submit_assessment(created["id"], api.AssessmentSubmitRequest(answers=answers))
+    assert len(created["questions"]) == 12
+    assert submitted["report"]["percentage"] == 100
+    assert len(submitted["report"]["feedback"]) == 12
+    progress = repository.progress_summary(course_id)
+    assert progress["completed_assessments"] == 1
+    assert progress["total_questions"] == 12
+    assert progress["score_history"][0]["score"] == 100

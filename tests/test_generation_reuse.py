@@ -96,6 +96,30 @@ def test_assessment_model_call_uses_a_schema_and_exact_question_count(monkeypatc
     assert schema["properties"]["questions"]["maxItems"] == 2
 
 
+def test_assessment_verifier_schema_locks_every_question_id(monkeypatch):
+    seen = []
+    questions = [
+        {"question_id": "question-one", "prompt": "Q1"},
+        {"question_id": "question-two", "prompt": "Q2"},
+    ]
+
+    def response(request, **kwargs):
+        seen.append(json.loads(request.data))
+        return io.BytesIO(json.dumps({"message": {"content": '{"decisions": []}'}}).encode())
+
+    monkeypatch.setattr(grounded, "urlopen", response)
+    prompt = (
+        "Independently solve every assessment question from the supplied evidence.\n"
+        "QUESTIONS: " + json.dumps(questions) + "\nEVIDENCE:\nsource text"
+    )
+    grounded.call_ollama_json(prompt)
+
+    schema = seen[0]["format"]
+    decision = schema["properties"]["decisions"]
+    assert decision["minItems"] == decision["maxItems"] == 2
+    assert decision["items"]["properties"]["question_id"]["enum"] == ["question-one", "question-two"]
+
+
 def test_hinglish_assessment_schema_locks_the_verified_answer_key(monkeypatch):
     from studybuddy.assessment import AssessmentDraft, AssessmentQuestion
     from studybuddy.language import HINGLISH_INSTRUCTION

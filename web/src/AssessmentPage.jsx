@@ -19,6 +19,7 @@ const TYPES = [
 export default function AssessmentPage({ api, workspace, guide, refreshLibrary, preferences = {} }) {
   const topics = useMemo(() => Array.from(new Set(guide?.concepts?.map(item => item.topic).filter(Boolean) || [])), [guide]);
   const [scope, setScope] = useState([]), [count, setCount] = useState(5);
+  const [selectedSourceIds, setSelectedSourceIds] = useState([]);
   const [difficulty, setDifficulty] = useState("medium"), [types, setTypes] = useState(["mcq", "short_answer"]);
   const [assessment, setAssessment] = useState(null), [answers, setAnswers] = useState({}), [report, setReport] = useState(null);
   const [mastery, setMastery] = useState([]), [recent, setRecent] = useState([]);
@@ -27,6 +28,11 @@ export default function AssessmentPage({ api, workspace, guide, refreshLibrary, 
   const [testLayout, setTestLayout] = useState("focus"), [activeQuestion, setActiveQuestion] = useState(0);
   useEffect(() => { setDifficulty(preferences.quiz_difficulty || "medium"); }, [preferences.quiz_difficulty]);
   useEffect(() => { setAssessmentLanguage(preferences.language || "english"); }, [preferences.language]);
+  useEffect(() => { setSelectedSourceIds([]); }, [workspace.id]);
+  useEffect(() => {
+    const available = new Set(workspace.sources.map(source => source.id));
+    setSelectedSourceIds(current => current.filter(id => available.has(id)));
+  }, [workspace.sources]);
 
   async function refreshAssessments() {
     const response = await fetch(`${api}/api/assessments`);
@@ -35,7 +41,11 @@ export default function AssessmentPage({ api, workspace, guide, refreshLibrary, 
   useEffect(() => { refreshAssessments(); }, [workspace.id]);
 
   async function generate(preset = null) {
-    const config = { ...(preset || { scope, question_count: count, difficulty, question_types: types }), language: assessmentLanguage };
+    const config = {
+      ...(preset || { scope, question_count: count, difficulty, question_types: types }),
+      source_ids: selectedSourceIds,
+      language: assessmentLanguage,
+    };
     if (!config.question_types.length) { setError("Select at least one question type."); return; }
     setBusy("generate"); setError(""); setReport(null);
     try {
@@ -73,13 +83,16 @@ export default function AssessmentPage({ api, workspace, guide, refreshLibrary, 
   if (!workspace.source_count) return <EmptyAssessment/>;
   if (!assessment) return <AssessmentBuilder {...{
     api, builderMode, setBuilderMode, assessmentLanguage, setAssessmentLanguage, generate,
+    sources: workspace.sources, selectedSourceIds, setSelectedSourceIds,
     mastery, scope, setScope, count, setCount, difficulty, setDifficulty, types, setTypes,
     topics, recent, openAssessment, busy, error, toggle,
   }}/>;
 
   const visibleQuestions = testLayout === "focus" ? [assessment.questions[activeQuestion]].filter(Boolean) : assessment.questions;
   return <div className="space-y-5">
-    <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">{report ? "Assessment report" : "Assessment in progress"}</p><h1 className="mt-1 text-2xl font-extrabold">{assessment.title}</h1><p className="mt-2 text-sm text-slate-600">{assessment.questions.length} verified questions · {assessment.config.difficulty} difficulty</p></div><div className="flex flex-wrap gap-2"><DownloadMenu label={report ? "Download report" : "Download question paper"} href={`${api}/api/assessments/${assessment.id}/download`}/><button onClick={reset} className="secondary-button"><RefreshCw size={16}/>New assessment</button></div></header>
+    <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">{report ? "Assessment report" : "Assessment in progress"}</p><h1 className="mt-1 text-2xl font-extrabold">{assessment.title}</h1><p className="mt-2 text-sm text-slate-600">{assessment.questions.length} verified questions{assessment.config.question_count ? ` of ${assessment.config.question_count} requested` : ""} · {assessment.config.difficulty} difficulty</p></div><div className="flex flex-wrap gap-2"><DownloadMenu label={report ? "Download report" : "Download question paper"} href={`${api}/api/assessments/${assessment.id}/download`}/><button onClick={reset} className="secondary-button"><RefreshCw size={16}/>New assessment</button></div></header>
+
+    {assessment.config.generation_notice && <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">{assessment.config.generation_notice}</div>}
 
     {!report && <>
       <section className="glass-card flex flex-wrap items-center justify-between gap-3 p-4"><div><p className="text-sm font-bold">Choose your test experience</p><p className="text-xs text-slate-500">Focus on one question or view the complete paper.</p></div><div className="flex rounded-xl bg-slate-100 p-1"><ModeButton active={testLayout === "focus"} onClick={() => setTestLayout("focus")} icon={Gauge} label="Focus mode"/><ModeButton active={testLayout === "paper"} onClick={() => setTestLayout("paper")} icon={ListChecks} label="Full paper"/></div></section>
@@ -99,6 +112,7 @@ function AssessmentBuilder(props) {
     <header><p className="eyebrow">Adaptive assessment</p><h1 className="mt-1 text-2xl font-extrabold">Choose how you want to practise</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Every question is generated from your material, independently checked and saved with a worked solution.</p></header>
     <div className="flex gap-2 rounded-2xl bg-white/70 p-2"><button onClick={() => props.setBuilderMode("quick")} className={props.builderMode === "quick" ? "primary-button" : "secondary-button"}>Practice styles</button><button onClick={() => props.setBuilderMode("custom")} className={props.builderMode === "custom" ? "primary-button" : "secondary-button"}>Build my own</button></div>
     <LanguagePicker value={props.assessmentLanguage} setValue={props.setAssessmentLanguage}/>
+    <section className="glass-card p-4"><p className="text-sm font-bold">Choose study material</p><p className="mt-1 text-xs text-slate-500">Select one or more files, or keep all materials selected.</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => props.setSelectedSourceIds([])} className={`rounded-full px-3 py-2 text-xs font-bold ${props.selectedSourceIds.length === 0 ? "bg-plum text-white" : "bg-slate-100 text-slate-600"}`}>All materials</button>{props.sources.map(source => <button key={source.id} title={source.name} onClick={() => props.setSelectedSourceIds(current => current.includes(source.id) ? current.filter(id => id !== source.id) : [...current, source.id])} className={`max-w-full truncate rounded-full px-3 py-2 text-xs font-bold ${props.selectedSourceIds.includes(source.id) ? "bg-mint text-emerald-800 ring-1 ring-emerald-300" : "bg-slate-100 text-slate-600"}`}>{source.name}</button>)}</div></section>
     {props.builderMode === "quick" ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       <QuickTest icon={Zap} tone="sky" title="Rapid recall" badge="5 min" detail="Five objective questions for a quick memory check." onClick={() => props.generate({ scope: [], question_count: 5, difficulty: "easy", question_types: ["mcq", "true_false", "fill_blank"] })}/>
       <QuickTest icon={BrainCircuit} tone="lilac" title="Diagnostic check" badge="Find my level" detail="A balanced test that establishes strengths and developing topics." onClick={() => props.generate({ scope: [], question_count: 8, difficulty: "medium", question_types: ["mcq", "short_answer", "true_false"] })}/>

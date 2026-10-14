@@ -5,7 +5,7 @@ import "@fontsource-variable/sora";
 import AccountGate from "./AccountGate.jsx";
 import Avatar from "./Avatar.jsx";
 import Brand from "./Brand.jsx";
-import { generationFetch as fetch } from "./generationFetch.js";
+import { generationFetch as fetch, reportGenerationJob } from "./generationFetch.js";
 import GenerationStop from "./GenerationStop.jsx";
 import { createRoot } from "react-dom/client";
 import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronLeft, ChevronRight, CircleHelp, Clock3, FileText, FolderPlus, GitBranch, Headphones, Home, Layers3, Leaf, Menu, MessageSquareText, PanelLeftClose, PanelLeftOpen, Pin, Search, Sparkles, Target, Upload, X } from "lucide-react";
@@ -17,6 +17,7 @@ import TutorPage from "./TutorPage.jsx";
 import DashboardPage from "./DashboardPage.jsx";
 import AssessmentPage from "./AssessmentPage.jsx";
 import ProgressPage from "./ProgressPage.jsx";
+import KeepAliveViews from "./KeepAliveViews.jsx";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 import FlashcardsPage from "./FlashcardsPage.jsx";
 import StudyMediaPage from "./StudyMediaPage.jsx";
@@ -55,6 +56,7 @@ function App({ user, openProfile }) {
   const [query, setQuery] = useState("");
   const [tutorState, setTutorState] = useState({ status: "idle", reply: null, message: "" });
   const [notice, setNotice] = useState("");
+  const [importJobs, setImportJobs] = useState({});
   const [library, setLibrary] = useState({ courses: [], conversations: [], artifacts: [], assessments: [], archivedCourses: [] });
   const [libraryError, setLibraryError] = useState("");
   const [libraryRefreshing, setLibraryRefreshing] = useState(false);
@@ -132,21 +134,53 @@ function App({ user, openProfile }) {
     if (!response.ok) throw new Error("Could not create course workspace.");
     const data = await response.json(); setWorkspace(data); setCourseMap(null); setGuideProgress(null); setConversationId(null); await refreshLibrary(); setNotice(`Created “${data.name}”. Add materials to begin.`); return data;
   }
+  async function monitorMediaImport(jobId, courseId, fileName) {
+    reportGenerationJob(jobId, API, "running");
+    setImportJobs(current => ({ ...current, [jobId]: { name: fileName, courseId, stage: "queued" } }));
+    try {
+      let job = { job_id: jobId, status: "running" };
+      while (job.status === "running") {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const response = await fetch(`${API}/api/material-jobs/${encodeURIComponent(jobId)}`);
+        const data = await response.json();
+        if (!response.ok || !data.job) throw new Error(data.detail || "Could not check media processing status.");
+        job = data.job;
+        setImportJobs(current => ({ ...current, [jobId]: { name: job.name || fileName, courseId, stage: job.stage } }));
+        reportGenerationJob(jobId, API, job.status);
+      }
+      if (job.status !== "complete") throw new Error(job.error || `${fileName} could not be processed.`);
+      setWorkspace(current => current.id === courseId ? job.workspace : current);
+      await refreshLibrary();
+      setNotice(`${job.name || fileName}: ready (${job.source?.chunks || 0} searchable sections).`);
+    } catch (error) {
+      reportGenerationJob(jobId, API, "failed");
+      setNotice(`${fileName}: ${error.message}`);
+    } finally {
+      setImportJobs(current => { const next = { ...current }; delete next[jobId]; return next; });
+    }
+  }
   async function uploadMaterials(files) {
     const form = new FormData(); Array.from(files).forEach(file => form.append("files", file));
     const response = await fetch(`${API}/api/materials`, { method: "POST", body: form });
     const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Upload failed.");
     setWorkspace(data.workspace); setCourseMap(null); await refreshLibrary();
-    const failed = data.reports.filter(report => report.status !== "indexed");
+    const processing = data.reports.filter(report => report.status === "processing");
+    const failed = data.reports.filter(report => !["indexed", "processing"].includes(report.status));
     const ready = data.reports.filter(report => report.status === "indexed");
-    const summary = data.reports.map(report => report.message || `${report.name}: ready (${report.chunks || 0} searchable sections)`).join(" · ");
+    const summary = data.reports.map(report => report.status === "processing" ? `${report.name}: upload received; reading continues in the background` : report.message || `${report.name}: ready (${report.chunks || 0} searchable sections)`).join(" · ");
     setNotice(summary);
+    processing.forEach(report => { void monitorMediaImport(report.job_id, data.workspace.id, report.name); });
     if (failed.length && !ready.length) throw new Error(failed.map(report => `${report.name}: ${report.message || "could not be read"}`).join(" · "));
   }
   async function uploadUrl(url) {
     const response = await fetch(`${API}/api/materials/url`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
     const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Link import failed.");
-    setWorkspace(data.workspace); setCourseMap(null); await refreshLibrary(); setNotice(`${data.report.name}: ready (${data.report.chunks} searchable sections)`); return data;
+    setWorkspace(data.workspace); setCourseMap(null); await refreshLibrary();
+    if (data.job) {
+      setNotice("Link received. Reading will continue in the background; you can keep using the app.");
+      void monitorMediaImport(data.job.job_id, data.workspace.id, data.job.name || "YouTube lecture");
+    } else setNotice(`${data.report.name}: ready (${data.report.chunks} searchable sections)`);
+    return data;
   }
   async function deleteMaterial(sourceId) {
     const response = await fetch(`${API}/api/materials/${sourceId}`, { method: "DELETE" });
@@ -212,19 +246,26 @@ function App({ user, openProfile }) {
       const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Could not prepare your study views.");
       let job = data.job;
       while (job?.status === "running") {
+        reportGenerationJob(job.job_id, API, job.status);
         setGuideProgress({ ...job, view });
         await new Promise(resolve => setTimeout(resolve, 1500));
-        const statusResponse = await fetch(`${API}/api/study-guide/status`);
+        const statusResponse = await fetch(`${API}/api/study-guide/status?job_id=${encodeURIComponent(data.job.job_id)}`);
         if (!statusResponse.ok) throw new Error("Could not check study guide progress.");
         const status = await statusResponse.json();
-        if (status.job?.job_id !== data.job.job_id) throw new Error("Material changed. Generate study views again.");
+        if (status.job?.job_id !== data.job.job_id) throw new Error("Could not find this generation job. Refresh and check saved History.");
         job = status.job;
       }
+      reportGenerationJob(data.job.job_id, API, job?.status);
       if (job?.status !== "complete") throw new Error(job?.error || "Material changed. Generate study views again.");
-      const mapResponse = await fetch(`${API}/api/course-map`);
-      if (!mapResponse.ok) throw new Error("Could not load your study views.");
-      const result = await mapResponse.json(); setCourseMap(result.course_map); setGuideProgress({ ...job, view });
-      setWorkspace(current => ({ ...current, course_map_ready: true })); await refreshLibrary(); return result.course_map;
+      let generatedMap = job.course_map;
+      if (!generatedMap) {
+        const mapResponse = await fetch(`${API}/api/course-map`);
+        if (!mapResponse.ok) throw new Error("Could not load your study views.");
+        generatedMap = (await mapResponse.json()).course_map;
+      }
+      setCourseMap(generatedMap); setGuideProgress({ ...job, view });
+      setWorkspace(current => current.id === job.course_id ? { ...current, course_map_ready: true } : current);
+      await refreshLibrary(); return generatedMap;
     } catch (error) { setGuideProgress({ status: "failed", view, error: error.message }); throw error; }
   }
   async function studyWholeMaterial(sourceIds = [], language = "english") {
@@ -235,6 +276,7 @@ function App({ user, openProfile }) {
       const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Could not start the full-material lesson.");
       let job = data.job;
       while (job?.status === "running") {
+        reportGenerationJob(job.job_id, API, job.status);
         setOverviewProgress(job); await new Promise(resolve => setTimeout(resolve, 1500));
         const statusResponse = await fetch(`${API}/api/tutor/overview/status?job_id=${encodeURIComponent(data.job.job_id)}`);
         if (!statusResponse.ok) throw new Error("Could not check lesson progress.");
@@ -242,6 +284,7 @@ function App({ user, openProfile }) {
         if (status.job?.job_id !== data.job.job_id) throw new Error("The material changed. Start the lesson again.");
         job = status.job;
       }
+      reportGenerationJob(data.job.job_id, API, job?.status);
       if (job?.status !== "complete") throw new Error(job?.error || "The lesson could not be completed.");
       setConversationId(job.result.conversation_id); setTutorState({ status: "ready", reply: job.result, message: "" });
       setOverviewProgress(job); await refreshLibrary();
@@ -282,7 +325,10 @@ function App({ user, openProfile }) {
       <div className="mb-5 flex shrink-0 items-center justify-between"><Brand/><div className="flex items-center gap-1"><button onClick={() => setSidebarCollapsed(true)} title="Collapse sidebar" aria-label="Collapse sidebar" className="hidden h-8 w-8 place-items-center rounded-full text-slate-400 transition hover:bg-white hover:text-plum hover:shadow-sm lg:grid"><ChevronLeft size={18}/></button><button onClick={() => setSidebarOpen(false)} aria-label="Close sidebar" className="rounded-xl p-2 text-slate-500 hover:bg-white lg:hidden"><X size={20}/></button></div></div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"><p className="eyebrow mb-3 px-3">Workspace</p><nav className="space-y-1">{navItems.map(([label, Icon]) => <button key={label} onClick={() => { setPage(label); setSidebarOpen(false); }} className={`nav-item ${page === label ? "nav-item-active" : ""}`}><Icon size={18}/>{label}</button>)}</nav><SidebarLibrary refreshLibrary={refreshLibrary} refreshing={libraryRefreshing} error={libraryError} courses={library.courses} conversations={library.conversations} workspace={workspace} selectCourse={selectCourse} openHistoryConversation={openHistoryConversation} archiveCourse={setPendingWorkspaceDelete} deleteChat={setPendingChatDelete} renameItem={(kind, item) => setRenameTarget({ kind, ...item })} pinItem={(kind, item) => updateLibraryItem(kind, item, { pinned: !item.pinned })}/></div>
     </aside>
-    <main className={`min-h-screen transition-[padding] duration-300 ${sidebarCollapsed ? "lg:pl-0" : "lg:pl-72"}`}><header className="app-header flex items-center justify-between px-5 py-3 sm:px-9"><div className="flex items-center gap-2"><button onClick={() => setSidebarOpen(true)} aria-label="Open sidebar" className="rounded-xl bg-white p-2 text-slate-600 shadow-sm lg:hidden"><Menu size={20}/></button>{sidebarCollapsed && <button onClick={() => setSidebarCollapsed(false)} title="Open sidebar" aria-label="Open sidebar" className="hidden rounded-xl bg-white p-2 text-slate-600 shadow-sm transition hover:text-plum lg:grid"><PanelLeftOpen size={20}/></button>}<div className={sidebarCollapsed ? "shrink-0" : "shrink-0 lg:hidden"}><Brand/></div></div><div className="flex items-center gap-3"><div className="hidden text-right sm:block"><p className="text-sm font-semibold">{workspace.name}</p><p className="text-xs text-slate-500">{workspace.source_count} study material{workspace.source_count === 1 ? "" : "s"} ready</p></div><button type="button" onClick={openProfile} aria-label="Open profile and settings" title="Profile & settings" className="grid h-10 w-10 place-items-center rounded-full border border-purple-200 bg-lilac font-bold text-plum transition hover:bg-purple-100 focus-visible:ring-2 focus-visible:ring-plum"><Avatar id={user.preferences?.avatar}/></button></div></header><section className="mx-auto max-w-7xl px-5 pb-12 sm:px-9">{content[page]}</section></main>
+    <main className={`min-h-screen transition-[padding] duration-300 ${sidebarCollapsed ? "lg:pl-0" : "lg:pl-72"}`}><header className="app-header flex items-center justify-between px-5 py-3 sm:px-9"><div className="flex items-center gap-2"><button onClick={() => setSidebarOpen(true)} aria-label="Open sidebar" className="rounded-xl bg-white p-2 text-slate-600 shadow-sm lg:hidden"><Menu size={20}/></button>{sidebarCollapsed && <button onClick={() => setSidebarCollapsed(false)} title="Open sidebar" aria-label="Open sidebar" className="hidden rounded-xl bg-white p-2 text-slate-600 shadow-sm transition hover:text-plum lg:grid"><PanelLeftOpen size={20}/></button>}<div className={sidebarCollapsed ? "shrink-0" : "shrink-0 lg:hidden"}><Brand/></div></div><div className="flex items-center gap-3"><div className="hidden text-right sm:block"><p className="text-sm font-semibold">{workspace.name}</p><p className="text-xs text-slate-500">{workspace.source_count} study material{workspace.source_count === 1 ? "" : "s"} ready</p></div><button type="button" onClick={openProfile} aria-label="Open profile and settings" title="Profile & settings" className="grid h-10 w-10 place-items-center rounded-full border border-purple-200 bg-lilac font-bold text-plum transition hover:bg-purple-100 focus-visible:ring-2 focus-visible:ring-plum"><Avatar id={user.preferences?.avatar}/></button></div></header><section className="mx-auto max-w-7xl px-5 pb-12 sm:px-9">
+      {Object.entries(importJobs).filter(([, job]) => job.courseId === workspace.id).map(([id, job]) => <div key={id} role="status" className="mb-3 flex items-center gap-2 rounded-xl bg-sky/40 px-3 py-2 text-xs text-slate-600"><RefreshCw size={13} className="shrink-0 animate-spin"/><span className="truncate">{job.name}</span><span className="ml-auto capitalize">{job.stage || "reading"}…</span></div>)}
+      <KeepAliveViews key={workspace.id} views={content} active={page}/>
+    </section></main>
     <ConfirmDialog open={!!pendingWorkspaceDelete} title="Remove this workspace from active study?" body={pendingWorkspaceDelete ? `“${pendingWorkspaceDelete.name}” will be archived from Recent Courses. Its uploaded sources, chats, generated maps, assessments and progress will stay safely stored in History.` : ""} confirmLabel="Archive workspace" busy={deletingWorkspace} onCancel={() => setPendingWorkspaceDelete(null)} onConfirm={() => deleteWorkspace(pendingWorkspaceDelete)}/>
     <ConfirmDialog open={!!pendingChatDelete} title="Delete this chat?" body={pendingChatDelete ? `“${pendingChatDelete.title}” and its messages will be permanently removed. Your uploaded materials, maps and assessments will not be affected.` : ""} confirmLabel="Delete chat" busy={libraryBusy} onCancel={() => setPendingChatDelete(null)} onConfirm={() => deleteChat(pendingChatDelete)}/>
     <RenameDialog target={renameTarget} busy={libraryBusy} onCancel={() => setRenameTarget(null)} onSave={value => updateLibraryItem(renameTarget.kind, renameTarget, { name: value })}/>

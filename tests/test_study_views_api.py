@@ -1,5 +1,6 @@
 from pathlib import Path
 from io import BytesIO
+import time
 
 import pytest
 from fastapi import HTTPException
@@ -8,6 +9,24 @@ from studybuddy import api
 from studybuddy.course_map import Concept, CourseMap
 from studybuddy.database import StudyRepository
 from studybuddy.ingestion.models import CitationAnchor, EvidenceKind, KnowledgeChunk, SourceType
+
+
+@pytest.fixture(autouse=True)
+def local_routing_test(monkeypatch):
+    # These tests exercise material routing; authentication has its own suite.
+    monkeypatch.setattr(api, "AUTH_REQUIRED", False)
+
+
+def wait_for_material(client, job_id):
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        response = client.get(f"/api/material-jobs/{job_id}")
+        job = response.json()["job"]
+        if job["status"] != "running":
+            assert job["status"] == "complete", job.get("error")
+            return job
+        time.sleep(0.01)
+    pytest.fail("Material reader did not finish the test input")
 
 
 def chunk():
@@ -36,8 +55,8 @@ def test_job_does_not_publish_a_guide_into_a_different_workspace(monkeypatch):
     monkeypatch.setattr(api, "workspace", api.Workspace(revision="new-course"))
     monkeypatch.setattr(api, "generate_course_map", lambda *args, **kwargs: guide())
     job = {"status": "running"}
-    api.run_guide_job(job, "old-course", "old-revision", "Old course", [chunk()], [])
-    assert job["status"] == "cancelled"
+    api.run_guide_job(job, "old-course", "Old course", [chunk()], [])
+    assert job["status"] == "failed"
     assert api.workspace.course_map is None
 
 
@@ -180,7 +199,8 @@ def test_uploaded_pdf_link_opens_the_original_document(monkeypatch, tmp_path: Pa
     client = TestClient(api.app)
     response = client.post("/api/materials", files={"files": ("Biology.pdf", buffer.getvalue(), "application/pdf")})
     assert response.status_code == 200
-    assert response.json()["workspace"]["chunk_count"] > 0
+    job = wait_for_material(client, response.json()["reports"][0]["job_id"])
+    assert job["workspace"]["chunk_count"] > 0
     citation = api.workspace.chunks[0].citation
     assert citation.target_uri().endswith("#page=1")
     opened = client.get(citation.source_uri)
@@ -207,9 +227,10 @@ def test_uploaded_text_file_reaches_the_connected_workspace(monkeypatch, tmp_pat
 
     assert response.status_code == 200
     body = response.json()
-    assert body["reports"][0]["status"] == "indexed"
-    assert body["reports"][0]["type"] == "document"
-    assert body["workspace"]["source_count"] == 1
+    assert body["reports"][0]["status"] == "processing"
+    job = wait_for_material(client, body["reports"][0]["job_id"])
+    assert job["source"]["type"] == "document"
+    assert job["workspace"]["source_count"] == 1
     assert api.workspace.chunks[0].citation.section == "paragraph 1"
 
 
@@ -238,5 +259,39 @@ def test_web_link_endpoint_indexes_a_fetched_page(monkeypatch, tmp_path: Path):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["report"]["type"] == "web page"
+    job = wait_for_material(client, body["job"]["job_id"])
+    assert job["source"]["type"] == "web page"
     assert api.workspace.chunks[0].citation.section == "Routing"
+
+
+def test_slow_reader_does_not_hold_upload_response_or_navigation(monkeypatch, tmp_path):
+    from threading import Event
+    from fastapi.testclient import TestClient
+    from studybuddy.ingestion.router import ParsedMaterial
+    from studybuddy.ingestion.models import SourceSegment
+    repository = StudyRepository(tmp_path / "slow.db")
+    course_id = repository.create_course("Handwriting")
+    monkeypatch.setattr(api, "repository", repository)
+    monkeypatch.setattr(api, "workspace", api.workspace_from_record(repository.load_course(course_id)))
+    monkeypatch.setattr(api, "UPLOAD_ROOT", tmp_path / "uploads")
+    reading = Event()
+    release = Event()
+    def slow_reader(path, *, source_id, source_name, source_uri, **kwargs):
+        reading.set()
+        assert release.wait(5)
+        return ParsedMaterial("image / handwriting", [SourceSegment(text="Energy is conserved in an isolated system.",
+            citation=CitationAnchor(source_id=source_id, source_name=source_name, source_type=SourceType.IMAGE, source_uri=source_uri))])
+    monkeypatch.setattr(api, "parse_study_file", slow_reader)
+    client = TestClient(api.app)
+    job_id = None
+    try:
+        response = client.post("/api/materials", files={"files": ("handwritten.png", b"photo bytes", "image/png")})
+        assert response.status_code == 200
+        job_id = response.json()["reports"][0]["job_id"]
+        assert reading.wait(2)
+        assert client.get(f"/api/material-jobs/{job_id}").json()["job"]["status"] == "running"
+        assert client.get("/api/workspace").status_code == 200
+    finally:
+        release.set()
+        if job_id:
+            wait_for_material(client, job_id)

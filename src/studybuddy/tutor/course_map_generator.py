@@ -278,9 +278,11 @@ def generate_course_map(
                   "an array of objects containing prerequisite_id and dependent_id. The prerequisite is learned first. "
                   "Include these existing links when they are consistent: "
                   + json.dumps([edge.model_dump() for edge in edges]) + "\nCONCEPTS:\n" + json.dumps(outline))
+        edge_cache_path = cache_path("guide-links", {"prompt": prompt, "model": cache_identity["model"], "endpoint": cache_identity["endpoint"]})
         for attempt in range(2):
             try:
-                payload = json.loads(generate_json(prompt))
+                cached_edges = read_cached(edge_cache_path) if reuse_cache and attempt == 0 else None
+                payload = json.loads(cached_edges or generate_json(prompt))
                 known_ids = {concept.concept_id for concept in concepts}
                 edges = [
                     PrerequisiteEdge.model_validate(edge)
@@ -291,6 +293,8 @@ def generate_course_map(
                     and edge.get("prerequisite_id") != edge.get("dependent_id")
                 ]
                 CourseMap(course_id=course_id_from_title(title), title=title, concepts=concepts, prerequisite_edges=edges)
+                if reuse_cache:
+                    save_cached(edge_cache_path, json.dumps(payload))
                 break
             except (ValueError, TypeError, KeyError) as error:
                 if attempt:

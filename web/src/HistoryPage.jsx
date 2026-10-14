@@ -6,7 +6,8 @@ import RichStudyText from "./RichStudyText.jsx";
 
 function dateLabel(value) {
   if (!value) return "";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  const timestamp = typeof value === "string" && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(value) ? `${value}Z` : value;
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(timestamp));
 }
 
 export default function HistoryPage({ api, history, courses, activeCourseId, selectCourse, selectedConversationId, onSelectConversation }) {

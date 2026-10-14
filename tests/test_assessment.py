@@ -7,6 +7,7 @@ from studybuddy.assessment import (
     generate_assessment,
     grade_objective,
     grade_short_answer,
+    grade_short_answer_set,
     humanize_math_text,
     localize_assessment,
     parse_assessment_draft,
@@ -94,6 +95,129 @@ def test_generation_repairs_a_repeated_question() -> None:
 
     assert calls == 2
     assert draft.questions[0].prompt.startswith("According to")
+
+
+def test_generation_fills_missing_slots_with_source_checked_recall() -> None:
+    status: dict[str, str] = {}
+
+    def generator(prompt: str) -> str:
+        return json.dumps(mcq_payload())
+
+    draft = generate_assessment(
+        course_name="Machine Learning",
+        chunks=[chunk()],
+        count=3,
+        difficulty="easy",
+        question_types=["mcq"],
+        scope=["Gradient descent"],
+        previous_prompts=[],
+        generate_json=generator,
+        verify_json=verifier,
+        generation_status=status,
+    )
+
+    assert len(draft.questions) == 3
+    assert "2 questions use basic source-recall practice" in status["notice"]
+    assert all(item.evidence_chunk_ids == ["optimisation-1"] for item in draft.questions)
+
+
+@pytest.mark.parametrize("kind", ["mcq", "short_answer", "numerical", "true_false", "fill_blank"])
+def test_model_failure_preserves_requested_format_and_count_when_source_supports_it(kind) -> None:
+    text = " ".join(
+        f"Experiment {index} measures temperature changes in heated metal samples after {index + 10} minutes."
+        for index in range(1, 9)
+    )
+    material = chunk().model_copy(update={"text": text, "token_count": len(text.split())})
+    status = {}
+
+    def offline(prompt):
+        raise RuntimeError("Local model unavailable")
+
+    draft = generate_assessment(course_name="Physics", chunks=[material], count=5,
+        difficulty="medium", question_types=[kind], scope=[], previous_prompts=[],
+        generate_json=offline, verify_json=offline, generation_status=status)
+
+    assert len(draft.questions) == 5
+    assert {question.question_type for question in draft.questions} == {kind}
+    assert len({question.prompt for question in draft.questions}) == 5
+    assert "source-recall" in status["notice"]
+    for question in draft.questions:
+        if kind != "true_false":
+            assert question.correct_answer in material.text
+
+
+def test_pure_numerical_request_does_not_invent_values_from_prose() -> None:
+    material = chunk().model_copy(update={"text": "Photosynthesis converts sunlight into chemical energy in green plants."})
+    def offline(prompt):
+        raise RuntimeError("Local model unavailable")
+    with pytest.raises(ValueError, match="No questions passed"):
+        generate_assessment(course_name="Biology", chunks=[material], count=5,
+            difficulty="medium", question_types=["numerical"], scope=[], previous_prompts=[],
+            generate_json=offline, verify_json=offline)
+
+
+def test_mixed_request_keeps_every_selected_format_on_model_failure() -> None:
+    text = " ".join(f"Experiment {index} measures temperature changes in heated metal samples after {index + 10} minutes." for index in range(1, 9))
+    material = chunk().model_copy(update={"text": text})
+    def offline(prompt):
+        raise RuntimeError("Local model unavailable")
+    kinds = ["mcq", "short_answer", "numerical", "true_false", "fill_blank"]
+    draft = generate_assessment(course_name="Physics", chunks=[material], count=12,
+        difficulty="medium", question_types=kinds, scope=[], previous_prompts=[],
+        generate_json=offline, verify_json=offline)
+    assert len(draft.questions) == 12
+    assert {question.question_type for question in draft.questions} == set(kinds)
+
+
+def test_explicit_stop_is_not_converted_into_fallback_practice() -> None:
+    from studybuddy.cancellation import GenerationStopped
+    def stopped(prompt):
+        raise GenerationStopped("Stopped by you.")
+    with pytest.raises(GenerationStopped):
+        generate_assessment(course_name="Physics", chunks=[chunk()], count=5,
+            difficulty="easy", question_types=["mcq"], scope=[], previous_prompts=[],
+            generate_json=stopped, verify_json=stopped)
+
+
+def test_written_answers_use_one_grading_call_and_preserve_each_response() -> None:
+    questions = [AssessmentQuestion(question_type="short_answer", prompt=f"Explain gradient descent in exercise {index}.",
+        topic="Gradient descent", difficulty="easy", correct_answer="Negative gradient direction",
+        explanation="The source states that parameters follow the negative gradient direction.",
+        grading_criteria=["Mentions the negative gradient"], evidence_chunk_ids=["optimisation-1"])
+        for index in range(3)]
+    answers = {question.question_id: "It follows the opposite of the gradient." for question in questions}
+    calls = []
+    def grader(prompt):
+        calls.append(prompt)
+        return json.dumps({"items": [{"question_id": str(index + 1), "score": 1,
+            "feedback": "Correct: the negative gradient points in the opposite direction to the gradient.",
+            "misconception": None} for index in range(3)]})
+    feedback = grade_short_answer_set(questions, answers, {"optimisation-1": chunk()}, grade_json=grader)
+    assert len(calls) == 1
+    assert all(feedback[question.question_id].score == 1 for question in questions)
+    assert all(feedback[question.question_id].response == answers[question.question_id] for question in questions)
+
+
+def test_generation_allows_distinct_questions_on_the_same_concept() -> None:
+    payload = mcq_payload()
+    second = dict(payload["questions"][0])
+    second["prompt"] = "What direction does gradient descent use?"
+    payload["questions"].append(second)
+
+    draft = generate_assessment(
+        course_name="Machine Learning",
+        chunks=[chunk()],
+        count=2,
+        difficulty="easy",
+        question_types=["mcq"],
+        scope=["Gradient descent"],
+        previous_prompts=[],
+        generate_json=lambda prompt: json.dumps(payload),
+        verify_json=verifier,
+    )
+
+    assert len(draft.questions) == 2
+    assert draft.questions[0].topic == draft.questions[1].topic
 
 
 def test_generation_repairs_an_mcq_answer_without_direct_source_support() -> None:

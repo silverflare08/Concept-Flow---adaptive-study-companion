@@ -5,6 +5,13 @@ const update = () => listeners.forEach(listener => listener());
 export const subscribeGeneration = listener => { listeners.add(listener); return () => listeners.delete(listener); };
 export const generationCount = () => active.size + jobs.size;
 
+export function reportGenerationJob(jobId, base, status) {
+  if (!jobId) return;
+  if (status === "running") jobs.set(jobId, { base });
+  else jobs.delete(jobId);
+  update();
+}
+
 export async function generationFetch(url, options = {}) {
   options = { credentials: "include", ...options };
   const tracked = options.method === "POST" && /\/api\/(tutor(?:$|\/overview$)|study-guide\/generate|course-map\/generate|assessments(?:$|\/[^/]+\/submit$)|materials(?:$|\/url$))/.test(String(url));
@@ -18,9 +25,10 @@ export async function generationFetch(url, options = {}) {
     if (response.ok && response.headers.get("content-type")?.includes("application/json")) {
       const data = await response.clone().json();
       if (data.job?.job_id) {
-        if (data.job.status === "running") jobs.set(data.job.job_id, { base });
-        else jobs.delete(data.job.job_id);
-        update();
+        reportGenerationJob(data.job.job_id, base, data.job.status);
+      }
+      for (const report of data.reports || []) {
+        if (report.job_id) reportGenerationJob(report.job_id, base, report.status === "processing" ? "running" : report.status);
       }
     }
     return response;
@@ -33,9 +41,9 @@ export async function generationFetch(url, options = {}) {
 export async function stopGenerations() {
   const pending = [];
   for (const [id, request] of active) {
-    pending.push(window.fetch(`${request.base}/api/generation/${id}/stop`, { method: "POST" }));
+    pending.push(window.fetch(`${request.base}/api/generation/${id}/stop`, { method: "POST", credentials: "include" }));
   }
-  for (const [id, job] of jobs) pending.push(window.fetch(`${job.base}/api/jobs/${id}/stop`, { method: "POST" }));
+  for (const [id, job] of jobs) pending.push(window.fetch(`${job.base}/api/jobs/${id}/stop`, { method: "POST", credentials: "include" }));
   const responses = await Promise.all(pending);
   if (responses.some(response => !response.ok)) throw new Error("Could not stop generation. Check the API connection.");
   for (const request of active.values()) request.controller.abort();

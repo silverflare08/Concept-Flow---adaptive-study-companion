@@ -32,6 +32,15 @@ def utc_now() -> datetime:
         return moment
 
 
+def iso_utc(value: datetime | None) -> str | None:
+    """Serialize SQLite datetimes as explicit UTC so browsers display local time."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -505,7 +514,7 @@ class StudyRepository:
                     "course_name": course_name,
                     "title": conversation.title,
                     "pinned": conversation.pinned,
-                    "updated_at": conversation.updated_at.isoformat(),
+                    "updated_at": iso_utc(conversation.updated_at),
                 }
                 for conversation, course_name in rows
             ]
@@ -561,7 +570,7 @@ class StudyRepository:
                         "role": message.role,
                         "content": message.content,
                         "metadata": json.loads(message.metadata_json or "{}"),
-                        "created_at": message.created_at.isoformat(),
+                        "created_at": iso_utc(message.created_at),
                     }
                     for message in messages
                 ],

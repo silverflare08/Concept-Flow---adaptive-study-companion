@@ -8,17 +8,19 @@
   --ink:61 78 88; --muted:100 116 139; --accent:61 78 88;
   --lilac:240 241 237; --lavender:218 220 214; --mint:238 241 234;
   --peach:243 240 234; --sky:239 241 241; --line:221 223 217;
+  --chart-good:75 135 106; --chart-warn:171 125 57; --chart-bad:171 88 96;
 }
-:root[data-theme="lavender"] { --canvas:248 247 252; --sidebar:243 240 250; --ink:38 55 70; --accent:103 87 143; --lilac:238 233 255; --lavender:220 212 255; --mint:226 244 236; --peach:255 240 231; --sky:230 242 255; --line:225 226 234; }
-:root[data-theme="sage"] { --canvas:245 248 245; --sidebar:234 242 236; --accent:62 102 84; --lilac:226 238 228; --lavender:194 216 201; --mint:227 241 233; --sky:229 239 242; }
-:root[data-theme="ocean"] { --canvas:244 248 252; --sidebar:233 241 250; --accent:54 94 140; --lilac:226 239 251; --lavender:197 218 242; --mint:226 242 239; --sky:229 240 253; }
-:root[data-theme="sand"] { --canvas:250 247 241; --sidebar:245 238 226; --accent:128 91 60; --lilac:243 233 216; --lavender:227 210 181; --mint:234 239 222; --sky:234 239 244; --peach:250 233 220; }
+:root[data-theme="lavender"] { --canvas:248 247 252; --sidebar:243 240 250; --ink:38 55 70; --accent:103 87 143; --lilac:238 233 255; --lavender:220 212 255; --mint:226 244 236; --peach:255 240 231; --sky:230 242 255; --line:225 226 234; --chart-good:59 143 109; --chart-warn:180 128 58; --chart-bad:190 86 111; }
+:root[data-theme="sage"] { --canvas:245 248 245; --sidebar:234 242 236; --accent:62 102 84; --lilac:226 238 228; --lavender:194 216 201; --mint:227 241 233; --sky:229 239 242; --chart-good:62 130 94; --chart-warn:177 126 52; --chart-bad:178 86 76; }
+:root[data-theme="ocean"] { --canvas:244 248 252; --sidebar:233 241 250; --accent:54 94 140; --lilac:226 239 251; --lavender:197 218 242; --mint:226 242 239; --sky:229 240 253; --chart-good:42 137 157; --chart-warn:183 123 49; --chart-bad:190 85 91; }
+:root[data-theme="sand"] { --canvas:250 247 241; --sidebar:245 238 226; --accent:128 91 60; --lilac:243 233 216; --lavender:227 210 181; --mint:234 239 222; --sky:234 239 244; --peach:250 233 220; --chart-good:78 130 91; --chart-warn:173 115 51; --chart-bad:178 94 70; }
 :root[data-theme="midnight"] {
   color-scheme: dark;
   --canvas:21 27 41; --surface:29 37 54; --sidebar:25 32 48;
   --ink:233 237 245; --muted:174 185 206; --accent:197 181 239;
   --lilac:48 43 70; --lavender:87 78 121; --mint:34 61 55;
   --peach:65 47 42; --sky:35 53 77; --line:62 72 93;
+  --chart-good:110 231 183; --chart-warn:252 211 77; --chart-bad:253 164 175;
 }
 * { box-sizing: border-box; }
 :root[data-theme="charcoal"] {
@@ -27,9 +29,22 @@
   --ink:234 239 237; --muted:175 191 185; --accent:155 213 197;
   --lilac:39 61 55; --lavender:73 112 100; --mint:38 65 53;
   --peach:65 50 42; --sky:38 56 64; --line:65 78 74;
+  --chart-good:110 221 177; --chart-warn:239 192 107; --chart-bad:251 156 145;
 }
 body { margin: 0; background: rgb(var(--canvas)); color: rgb(var(--ink)); font-size: 15px; line-height: 1.5; }
 .app-shell { background: rgb(var(--canvas)); }
+.chart-primary { background:linear-gradient(to top, rgb(var(--accent)), rgb(var(--lavender))); }
+.chart-good { background-color:rgb(var(--chart-good)); }
+.chart-warn { background-color:rgb(var(--chart-warn)); }
+.chart-bad { background-color:rgb(var(--chart-bad)); }
+.chart-good-text { color:rgb(var(--chart-good)); }
+.chart-warn-text { color:rgb(var(--chart-warn)); }
+.chart-bad-text { color:rgb(var(--chart-bad)); }
+.chart-accent-text { color:rgb(var(--accent)); }
+.chart-track { background-color:rgb(var(--line) / .7); }
+.chart-empty { background-color:rgb(var(--line)); }
+.chart-surface { background-color:rgb(var(--surface)); }
+.chart-active-ring { --tw-ring-color:rgb(var(--accent)); }
 .welcome-page {
   color-scheme:light;
   --canvas:247 247 244; --surface:255 255 255; --ink:61 78 88;

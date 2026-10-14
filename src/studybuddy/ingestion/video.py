@@ -75,6 +75,7 @@ def transcribe_video(
     source_uri: str | None = None,
     model_size: str | None = None,
     source_type: SourceType = SourceType.VIDEO,
+    content_sha256: str | None = None,
 ) -> list[SourceSegment]:
     """Run local faster-whisper and return timestamp-cited transcript segments."""
     video_path = Path(path)
@@ -91,16 +92,20 @@ def transcribe_video(
     device = os.getenv("WHISPER_DEVICE", "cpu")
     compute_type = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
     model_size = model_size or os.getenv("WHISPER_MODEL", "base")
-    beam_size = int(os.getenv("WHISPER_BEAM_SIZE", "5"))
+    # CPU-friendly default; users can raise this for slower, potentially more
+    # accurate transcription when needed.
+    beam_size = int(os.getenv("WHISPER_BEAM_SIZE", "1"))
     if not 1 <= beam_size <= 10:
         raise ValueError("WHISPER_BEAM_SIZE must be between 1 and 10.")
-    digest = hashlib.sha256()
-    with video_path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            check_cancelled()
-            digest.update(block)
+    if content_sha256 is None:
+        digest = hashlib.sha256()
+        with video_path.open("rb") as stream:
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                check_cancelled()
+                digest.update(block)
+        content_sha256 = digest.hexdigest()
     cached_path = cache_path("transcripts", {
-        "version": 1, "sha256": digest.hexdigest(), "model": model_size,
+        "version": 1, "sha256": content_sha256, "model": model_size,
         "device": device, "compute_type": compute_type, "beam_size": beam_size,
     })
     spans = None

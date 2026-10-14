@@ -23,5 +23,13 @@ class AccountProxy:
         return self.target() / value
 
 
-def submit_account_job(executor, function, *args):
-    return executor.submit(copy_context().run, function, *args)
+def submit_account_job(executor, function, *args, **kwargs):
+    # A worker must keep the workspace active when it was submitted. The
+    # request's account dict is otherwise mutated when the user switches
+    # workspaces, which can make an unrelated navigation invalidate the job.
+    context = copy_context()
+    account = account_context.get()
+    if account is not None:
+        snapshot = dict(account)
+        context.run(account_context.set, snapshot)
+    return executor.submit(context.run, function, *args, **kwargs)

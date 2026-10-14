@@ -143,6 +143,8 @@ def call_ollama_json(prompt: str) -> str:
     endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
     model = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
     output_format: object = "json"
+    num_predict = 2400
+    request_timeout = 180
     # Assessment schemas constrain structure, not factual correctness. Independent
     # answer/source checks still run after drafting.
     if prompt.startswith("Create exactly") or prompt.startswith("Rewrite this VERIFIED assessment"):
@@ -150,9 +152,15 @@ def call_ollama_json(prompt: str) -> str:
         output_format = AssessmentDraft.model_json_schema()
         requested = re.search(r"Create exactly (\d+) assessment questions", prompt)
         if requested:
+            request_timeout = 45
             count = int(requested.group(1))
+            # Reserve enough output for the worked explanations and structured
+            # fields; too-small caps often truncate the JSON and force another
+            # full local-model call. The cap keeps larger exams bounded.
+            num_predict = min(4096, max(1200, 600 + count * 400))
             output_format["properties"]["questions"].update(minItems=count, maxItems=count)
             question_schema = output_format["$defs"]["AssessmentQuestion"]
+            question_schema["properties"].pop("question_id", None)
             question_schema["required"] = list(dict.fromkeys(question_schema["required"] + ["options", "evidence_chunk_ids"]))
             kinds = re.search(r"Allowed question types: (\[[^\n]+\])", prompt)
             if kinds:
@@ -176,6 +184,64 @@ def call_ollama_json(prompt: str) -> str:
                 variant["required"] = list(dict.fromkeys(variant["required"] + list(item)))
                 variants.append(variant)
             output_format["properties"]["questions"].update(minItems=len(variants), maxItems=len(variants), items={"anyOf": variants})
+    elif prompt.startswith("Independently solve every assessment question"):
+        request_timeout = 45
+        # The verifier used to return unconstrained JSON and frequently omitted
+        # or mistyped random question IDs. The application then treated those
+        # otherwise usable decisions as failed verification. Constrain the IDs
+        # and require one decision for every submitted question.
+        questions_text = prompt.split("QUESTIONS: ", 1)[1].split("\nEVIDENCE:", 1)[0]
+        questions = json.loads(questions_text)
+        question_ids = list(dict.fromkeys(str(item["question_id"]) for item in questions))
+        num_predict = 200 + 180 * len(question_ids)
+        output_format = {
+            "type": "object",
+            "properties": {
+                "decisions": {
+                    "type": "array",
+                    "minItems": len(question_ids),
+                    "maxItems": len(question_ids),
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "question_id": {"type": "string", "enum": question_ids},
+                            "valid": {"type": "boolean"},
+                            "verified_answer": {"type": "string"},
+                            "reason": {"type": "string"},
+                        },
+                        "required": ["question_id", "valid", "verified_answer", "reason"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["decisions"],
+            "additionalProperties": False,
+        }
+    elif prompt.startswith("Grade these student answers"):
+        data = json.loads(prompt.split("\nDATA: ", 1)[1])
+        request_timeout = 60
+        num_predict = min(4096, 300 + 250 * len(data))
+        output_format = {"type": "object", "properties": {"items": {
+            "type": "array", "minItems": len(data), "maxItems": len(data),
+            "items": {"type": "object", "properties": {
+                "question_id": {"type": "string", "enum": [item["question_id"] for item in data]},
+                "score": {"type": "number", "minimum": 0, "maximum": 1},
+                "feedback": {"type": "string"}, "misconception": {"type": ["string", "null"]},
+            }, "required": ["question_id", "score", "feedback", "misconception"], "additionalProperties": False},
+        }}, "required": ["items"], "additionalProperties": False}
+    elif prompt.startswith("Analyse incorrect objective answers"):
+        request_timeout = 30
+    elif prompt.startswith("Create a study guide for"):
+        from studybuddy.course_map import CourseMap
+        output_format = CourseMap.model_json_schema()
+        output_format["properties"].pop("course_id", None)
+        output_format["properties"].pop("title", None)
+        output_format["required"] = ["concepts", "prerequisite_edges"]
+        concept_schema = output_format["$defs"]["Concept"]
+        concept_schema["required"] = list(concept_schema["properties"])
+        ids = list(dict.fromkeys(re.findall(r"CHUNK_ID: ([^\n]+)", prompt)))
+        if ids:
+            concept_schema["properties"]["evidence_chunk_ids"].update(minItems=1, items={"type": "string", "enum": ids})
     payload = json.dumps(
         {
             "model": model,
@@ -183,12 +249,12 @@ def call_ollama_json(prompt: str) -> str:
             "keep_alive": "10m",
             "format": output_format,
             "messages": [{"role": "user", "content": prompt}],
-            "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 2400, "repeat_penalty": 1.1},
+            "options": {"temperature": 0, "num_ctx": 8192, "num_predict": num_predict, "repeat_penalty": 1.1},
         }
     ).encode("utf-8")
     request = Request(endpoint, data=payload, headers={"Content-Type": "application/json"}, method="POST")
     try:
-        with urlopen(request, timeout=180) as response:  # nosec B310 - local configurable endpoint
+        with urlopen(request, timeout=request_timeout) as response:  # nosec B310 - local configurable endpoint
             body = json.loads(response.read().decode("utf-8"))
     except (URLError, TimeoutError) as error:
         raise RuntimeError("The local model did not finish in time. Try fewer sources or restart Ollama.") from error

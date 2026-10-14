@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import json
+import hashlib
 import mimetypes
 from pathlib import Path
 from typing import Literal
@@ -21,7 +22,6 @@ from studybuddy.cancellation import current_cancel, requests as cancellable_requ
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
-from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from studybuddy.course_map import CourseMap
@@ -33,15 +33,15 @@ from studybuddy.assessment import (
     generate_assessment,
     grade_objective,
     enrich_objective_misconceptions,
-    grade_short_answer,
+    grade_short_answer_set,
     humanize_math_text,
 )
 from studybuddy.ingestion.chunker import chunk_segments
-from studybuddy.ingestion.models import EvidenceKind, KnowledgeChunk
-from studybuddy.ingestion.router import SUPPORTED_FILE_TYPES, parse_study_file
-from studybuddy.ingestion.video import transcribe_video
+from studybuddy.ingestion.models import EvidenceKind, KnowledgeChunk, SourceType
+from studybuddy.ingestion.router import SUPPORTED_FILE_TYPES, AUDIO_TYPES, VIDEO_TYPES, parse_study_file
+from studybuddy.ingestion.video import transcribe_video, segments_from_transcript
 from studybuddy.ingestion.web import fetch_public_resource, ingest_web_page, is_youtube_url
-from studybuddy.ingestion.youtube import download_youtube_audio
+from studybuddy.ingestion.youtube import download_youtube_audio, fetch_youtube_captions
 from studybuddy.retrieval.bm25 import BM25Index
 from studybuddy.tutor.course_map_generator import generate_course_map
 from studybuddy.tutor.grounded import call_ollama_json, call_ollama_long, ollama_available, tutor_answer, verify_lesson
@@ -114,7 +114,11 @@ def check_job_owner(job):
         raise HTTPException(status_code=404, detail="Generation not found.")
 guide_executor = ThreadPoolExecutor(max_workers=1)
 overview_executor = ThreadPoolExecutor(max_workers=1)
+media_executor = ThreadPoolExecutor(max_workers=2)
 overview_jobs: dict[str, dict[str, object]] = {}
+guide_jobs: dict[str, dict[str, object]] = {}
+media_jobs: dict[str, dict[str, object]] = {}
+media_job_events: dict[str, Event] = {}
 app = FastAPI(title="ConceptFlow API", version="0.1.0")
 
 @app.middleware("http")
@@ -140,7 +144,7 @@ def stop_request(request_id: str):
 
 @app.post("/api/jobs/{job_id}/stop")
 def stop_background_job(job_id: str):
-    job = overview_jobs.get(job_id)
+    job = overview_jobs.get(job_id) or guide_jobs.get(job_id) or media_jobs.get(job_id)
     if job is None and workspace.guide_job and workspace.guide_job.get("job_id") == job_id:
         job = workspace.guide_job
     if job is None:
@@ -148,6 +152,8 @@ def stop_background_job(job_id: str):
     check_job_owner(job)
     if job.get("status") == "running":
         job.update(status="cancelled", error="Stopped by you.")
+        if job_id in media_job_events:
+            media_job_events[job_id].set()
     return {"job": dict(job)}
 app.add_middleware(
     CORSMiddleware,
@@ -198,6 +204,7 @@ class OverviewRequest(BaseModel):
 
 class AssessmentCreateRequest(BaseModel):
     scope: list[str] = Field(default_factory=list, max_length=12)
+    source_ids: list[str] = Field(default_factory=list, max_length=100)
     question_count: int = Field(default=5, ge=1, le=12)
     difficulty: Literal["easy", "medium", "hard"] = "medium"
     question_types: list[Literal["mcq", "short_answer", "numerical", "true_false", "fill_blank"]] = Field(min_length=1)
@@ -251,10 +258,108 @@ def add_indexed_material(
     if stored_path is not None:
         workspace.source_files[source_id] = stored_path
     workspace.revision = uuid4().hex
-    workspace.guide_job = None
     source = {"id": source_id, "name": name, "type": kind, "status": "indexed", "chunks": len(chunks), "downloadable": stored_path is not None}
     workspace.sources.append(source)
     return source
+
+
+def run_media_import_job(
+    job: dict[str, object], *, kind: str, path: Path | None = None,
+    source_id: str, name: str, source_uri: str | None = None,
+    url: str | None = None, content_sha256: str | None = None,
+) -> None:
+    """Read any uploaded material without holding the UI request open."""
+    job_id = str(job["job_id"])
+    event = media_job_events.setdefault(job_id, Event())
+    if event.is_set() or job.get("status") == "cancelled":
+        job.update(status="cancelled", error="Stopped by you.")
+        media_job_events.pop(job_id, None)
+        return
+    token = current_cancel.set(event)
+    try:
+        stored_path = path
+        if kind == "youtube":
+            job.update(stage="checking captions")
+            captions = fetch_youtube_captions(str(url))
+            if captions:
+                name, source_uri, spans = captions
+                segments = segments_from_transcript(spans, source_id=source_id, source_name=name, source_uri=source_uri)
+                job.update(name=name, stage="indexing captions")
+            else:
+                job.update(stage="downloading")
+                stored_path, name, source_uri = download_youtube_audio(str(url), UPLOAD_ROOT / "youtube")
+                job.update(name=name, stage="transcribing")
+                segments = transcribe_video(
+                    stored_path, source_id=source_id, source_name=name,
+                    source_uri=source_uri, source_type=SourceType.VIDEO,
+                )
+            material_kind = "youtube video"
+        elif kind == "url":
+            job.update(stage="downloading")
+            resource = fetch_public_resource(str(url))
+            if resource.content_type in {"text/html", "application/xhtml+xml"}:
+                name, segments = ingest_web_page(
+                    resource.content, source_id=source_id, source_name=resource.filename,
+                    source_uri=resource.final_url,
+                )
+                material_kind = "web page"
+            else:
+                suffix = Path(resource.filename).suffix.lower()
+                if suffix not in SUPPORTED_FILE_TYPES:
+                    suffix = {"application/pdf": ".pdf", "image/png": ".png", "image/jpeg": ".jpg",
+                              "text/plain": ".txt", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx"}.get(resource.content_type, "")
+                if suffix not in SUPPORTED_FILE_TYPES:
+                    raise ValueError(f"Unsupported link content type: {resource.content_type}")
+                name = resource.filename if Path(resource.filename).suffix else f"linked-material{suffix}"
+                stored_path = UPLOAD_ROOT / f"{uuid4().hex}-{Path(name).name}"
+                stored_path.parent.mkdir(parents=True, exist_ok=True)
+                stored_path.write_bytes(resource.content)
+                job.update(stage="reading")
+                parsed = parse_study_file(stored_path, source_id=source_id, source_name=name, source_uri=resource.final_url)
+                segments, material_kind = parsed.segments, parsed.kind
+            job.update(name=name)
+        else:
+            job.update(stage="reading")
+            if stored_path is None:
+                raise ValueError("The media file could not be found.")
+            parsed = parse_study_file(
+                stored_path, source_id=source_id, source_name=name, source_uri=source_uri,
+                content_sha256=content_sha256,
+            )
+            segments, material_kind = parsed.segments, parsed.kind
+        if event.is_set() or job.get("status") == "cancelled":
+            job.update(status="cancelled", error="Stopped by you.")
+            return
+        source = add_indexed_material(
+            source_id=source_id, name=name, kind=material_kind, segments=segments,
+            stored_path=stored_path,
+        )
+        job.update(status="complete", stage="ready", source=source, workspace=workspace_summary())
+    except Exception as error:
+        job.update(status="cancelled" if event.is_set() else "failed", error="Stopped by you." if event.is_set() else str(error))
+    finally:
+        current_cancel.reset(token)
+        media_job_events.pop(job_id, None)
+
+
+def queue_media_import(
+    *, kind: str, source_id: str, name: str, path: Path | None = None,
+    source_uri: str | None = None, url: str | None = None,
+    content_sha256: str | None = None,
+) -> dict[str, object]:
+    job: dict[str, object] = {
+        "job_id": uuid4().hex, "status": "running",
+        "stage": "queued", "kind": kind, "name": name,
+        "course_id": workspace.course_id, "user_id": current_user_id(),
+    }
+    media_jobs[str(job["job_id"])] = job
+    media_job_events[str(job["job_id"])] = Event()
+    submit_account_job(
+        media_executor, run_media_import_job, job, kind=kind, path=path,
+        source_id=source_id, name=name, source_uri=source_uri, url=url,
+        content_sha256=content_sha256,
+    )
+    return dict(job)
 
 
 def workspace_summary() -> dict[str, object]:
@@ -525,10 +630,14 @@ async def upload_materials(files: list[UploadFile] = File(...)) -> dict[str, obj
     """Save and parse arbitrary study documents into the active workspace."""
     UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
     reports: list[dict[str, object]] = []
-    upload_course_id = workspace.course_id
-    upload_revision = workspace.revision
 
-    for uploaded in files:
+    # Start long media work before any slower document/OCR work in a mixed upload.
+    ordered_uploads = sorted(
+        files,
+        key=lambda item: Path(item.filename or "").suffix.lower() in AUDIO_TYPES | VIDEO_TYPES,
+        reverse=True,
+    )
+    for uploaded in ordered_uploads:
         original_name = Path(uploaded.filename or "untitled").name
         suffix = Path(original_name).suffix.lower()
         if suffix not in SUPPORTED_FILE_TYPES:
@@ -536,26 +645,21 @@ async def upload_materials(files: list[UploadFile] = File(...)) -> dict[str, obj
             continue
 
         stored_path = UPLOAD_ROOT / f"{uuid4().hex}-{original_name}"
-        stored_path.write_bytes(await uploaded.read())
+        content_hasher = hashlib.sha256()
+        # Stream to disk in bounded blocks instead of holding the full upload
+        # in memory (often twice over for large recordings or PDFs).
+        with stored_path.open("wb") as destination:
+            while block := await uploaded.read(1024 * 1024):
+                destination.write(block)
+                content_hasher.update(block)
         source_id = f"source-{uuid4().hex[:12]}"
 
-        try:
-            # Vision/transcription can take minutes; never block the async API
-            # loop, which must still serve status and cancellation requests.
-            parsed = await run_in_threadpool(parse_study_file,
-                stored_path, source_id=source_id, source_name=original_name,
-                source_uri=f"/api/sources/{source_id}",
-            )
-            if workspace.course_id != upload_course_id or workspace.revision != upload_revision:
-                raise ValueError("The workspace changed while reading this file. Reupload it in the intended workspace.")
-            source = add_indexed_material(
-                source_id=source_id, name=original_name, kind=parsed.kind,
-                segments=parsed.segments, stored_path=stored_path,
-            )
-            reports.append(source)
-            upload_revision = workspace.revision
-        except Exception as error:
-            reports.append({"name": original_name, "status": "failed", "message": str(error)})
+        job = queue_media_import(
+            kind="upload", source_id=source_id, name=original_name,
+            path=stored_path, source_uri=f"/api/sources/{source_id}",
+            content_sha256=content_hasher.hexdigest(),
+        )
+        reports.append({"name": original_name, "status": "processing", "job_id": job["job_id"]})
 
     return {"reports": reports, "workspace": workspace_summary()}
 
@@ -564,52 +668,19 @@ async def upload_materials(files: list[UploadFile] = File(...)) -> dict[str, obj
 def import_material_url(request: UrlMaterialRequest) -> dict[str, object]:
     """Import a YouTube lecture, direct study file, PDF book, or public web page."""
     source_id = f"source-{uuid4().hex[:12]}"
-    try:
-        if is_youtube_url(request.url):
-            path, title, canonical_url = download_youtube_audio(request.url, UPLOAD_ROOT / "youtube")
-            segments = transcribe_video(
-                path, source_id=source_id, source_name=title, source_uri=canonical_url,
-            )
-            source = add_indexed_material(
-                source_id=source_id, name=title, kind="youtube video",
-                segments=segments, stored_path=path,
-            )
-        else:
-            resource = fetch_public_resource(request.url)
-            suffix = Path(resource.filename).suffix.lower()
-            is_html = resource.content_type in {"text/html", "application/xhtml+xml"}
-            if is_html:
-                display_name, segments = ingest_web_page(
-                    resource.content, source_id=source_id, source_name=resource.filename,
-                    source_uri=resource.final_url,
-                )
-                source = add_indexed_material(
-                    source_id=source_id, name=display_name, kind="web page", segments=segments,
-                )
-            else:
-                if suffix not in SUPPORTED_FILE_TYPES:
-                    content_suffixes = {
-                        "application/pdf": ".pdf",
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-                        "image/png": ".png", "image/jpeg": ".jpg", "text/plain": ".txt",
-                    }
-                    suffix = content_suffixes.get(resource.content_type, "")
-                if suffix not in SUPPORTED_FILE_TYPES:
-                    raise ValueError(f"Unsupported link content type: {resource.content_type}")
-                name = resource.filename if Path(resource.filename).suffix else f"linked-material{suffix}"
-                stored_path = UPLOAD_ROOT / f"{uuid4().hex}-{Path(name).name}"
-                stored_path.parent.mkdir(parents=True, exist_ok=True)
-                stored_path.write_bytes(resource.content)
-                parsed = parse_study_file(
-                    stored_path, source_id=source_id, source_name=name, source_uri=resource.final_url,
-                )
-                source = add_indexed_material(
-                    source_id=source_id, name=name, kind=parsed.kind,
-                    segments=parsed.segments, stored_path=stored_path,
-                )
-    except Exception as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
-    return {"report": source, "workspace": workspace_summary()}
+    youtube = is_youtube_url(request.url)
+    job = queue_media_import(kind="youtube" if youtube else "url", source_id=source_id,
+                             name="YouTube lecture" if youtube else "Linked material", url=request.url)
+    return {"job": job, "workspace": workspace_summary()}
+
+
+@app.get("/api/material-jobs/{job_id}")
+def material_job_status(job_id: str) -> dict[str, object]:
+    job = media_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Media processing job not found.")
+    check_job_owner(job)
+    return {"job": dict(job)}
 
 
 @app.get("/api/sources/{source_id}")
@@ -651,7 +722,6 @@ def delete_material(source_id: str) -> dict[str, object]:
     workspace.course_map = None
     workspace.guide_source_ids = []
     workspace.revision = uuid4().hex
-    workspace.guide_job = None
     return {"archived": {"id": source_id, "name": source["name"]}, "workspace": workspace_summary()}
 
 
@@ -695,9 +765,12 @@ def compact_transcript_chunks(
 
 
 def run_guide_job(
-    job: dict[str, object], course_id: str, revision: str, title: str,
+    job: dict[str, object], course_id: str, title: str,
     chunks: list[KnowledgeChunk], source_ids: list[str],
 ) -> None:
+    if workspace.course_id != course_id:
+        job.update(status="failed", error="The generation workspace could not be restored.")
+        return
     def progress(completed: int, total: int) -> None:
         if job.get("status") == "cancelled":
             raise GenerationStopped("Stopped by you.")
@@ -706,14 +779,14 @@ def run_guide_job(
         generated = generate_course_map(title, chunks, generate_json=call_ollama_json, on_progress=progress, reuse_cache=True)
         if job.get("status") == "cancelled":
             return
-        if workspace.course_id != course_id or workspace.revision != revision:
-            job.update(status="cancelled", error="Material changed. Generate a guide for your current material.")
-            return
         workspace.course_map = generated
         workspace.guide_source_ids = source_ids
         workspace.guide_evidence = {chunk.chunk_id: chunk for chunk in chunks}
         artifact_id = repository.save_course_map(course_id, generated)
-        job.update(status="complete", artifact_id=artifact_id)
+        job.update(
+            status="complete", artifact_id=artifact_id,
+            course_map=course_map_view(generated, chunks=chunks, selected_source_ids=source_ids),
+        )
     except Exception as error:
         job.update(status="cancelled" if isinstance(error, GenerationStopped) else "failed", error=str(error))
 
@@ -734,19 +807,22 @@ def start_study_guide(request: GuideRequest | None = None) -> dict[str, object]:
         "job_id": uuid4().hex, "status": "running", "completed_batches": 0,
         "total_batches": 0, "source_ids": source_ids, "source_chunks": len(chunks),
         "analysis_chunks": len(compacted_chunks),
-        "user_id": current_user_id(),
+        "course_id": workspace.course_id, "user_id": current_user_id(),
     }
     workspace.guide_job = job
+    guide_jobs[str(job["job_id"])] = job
     submit_account_job(guide_executor,
-        run_guide_job, job, workspace.course_id, workspace.revision,
-        workspace.name, compacted_chunks, source_ids,
+        run_guide_job, job, workspace.course_id, workspace.name, compacted_chunks, source_ids,
     )
     return {"job": dict(job)}
 
 
 @app.get("/api/study-guide/status")
-def study_guide_status() -> dict[str, object]:
-    return {"job": dict(workspace.guide_job) if workspace.guide_job else None}
+def study_guide_status(job_id: str | None = None) -> dict[str, object]:
+    job = guide_jobs.get(job_id) if job_id else workspace.guide_job
+    if job:
+        check_job_owner(job)
+    return {"job": dict(job) if job else None}
 
 
 @app.get("/api/study-guides")
@@ -938,15 +1014,20 @@ def create_assessment(request: AssessmentCreateRequest) -> dict[str, object]:
     if not workspace.chunks:
         raise HTTPException(status_code=400, detail="Upload study material before generating an assessment.")
     try:
+        assessment_chunks = selected_guide_chunks(request.source_ids)
         adaptive_scope = request.scope
         if not adaptive_scope:
+            available_topics = set(topics_for_chunks(assessment_chunks))
             adaptive_scope = [
                 str(item["topic"]) for item in repository.topic_masteries(workspace.course_id)
-                if float(item["mastery"]) < 0.7
+                if float(item["mastery"]) < 0.7 and str(item["topic"]) in available_topics
             ][:3]
+        selected_names = [str(source["name"]) for source in workspace.sources
+                          if not request.source_ids or source["id"] in request.source_ids]
+        generation_status: dict[str, str] = {}
         draft = generate_assessment(
-            course_name=workspace.name,
-            chunks=workspace.chunks,
+            course_name=workspace.name if not request.source_ids else ", ".join(selected_names),
+            chunks=assessment_chunks,
             count=request.question_count,
             difficulty=request.difficulty,
             question_types=request.question_types,
@@ -955,11 +1036,16 @@ def create_assessment(request: AssessmentCreateRequest) -> dict[str, object]:
             generate_json=call_ollama_json,
             verify_json=call_ollama_json,
             language=request.language,
+            generation_status=generation_status,
         )
         assessment_id = repository.save_assessment(
             workspace.course_id,
             draft,
-            config={**request.model_dump(), "adaptive_scope": adaptive_scope},
+            config={
+                **request.model_dump(),
+                "adaptive_scope": adaptive_scope,
+                **generation_status,
+            },
         )
         record = repository.get_assessment(assessment_id)
     except (RuntimeError, ValueError) as error:
@@ -1066,16 +1152,15 @@ def submit_assessment(assessment_id: str, request: AssessmentSubmitRequest) -> d
     chunks_by_id = {chunk.chunk_id: chunk for chunk in course["chunks"]}
     feedback = []
     try:
+        written = grade_short_answer_set(
+            [question for question in record["questions"] if question.question_type == "short_answer"],
+            request.answers, chunks_by_id, grade_json=call_ollama_json,
+            language=str(record["config"].get("language", "english")),
+        )
         for question in record["questions"]:
             response = request.answers.get(question.question_id, "")
             if question.question_type == "short_answer":
-                result = grade_short_answer(
-                    question,
-                    response,
-                    chunks_by_id,
-                    grade_json=call_ollama_json,
-                    language=str(record["config"].get("language", "english")),
-                )
+                result = written[question.question_id]
             else:
                 result = grade_objective(question, response)
             feedback.append(result)

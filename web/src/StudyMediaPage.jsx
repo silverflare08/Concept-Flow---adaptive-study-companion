@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import LanguageSelector from "./LanguageSelector.jsx";
-import { generationFetch as fetch } from "./generationFetch.js";
+import { generationFetch as fetch, reportGenerationJob } from "./generationFetch.js";
 import { ArrowLeft, ArrowRight, Headphones, Play, Sparkles, Square, Video, Volume2 } from "lucide-react";
 import { SourceReferences } from "./StudyViews.jsx";
 import WorkingState from "./WorkingState.jsx";
@@ -21,11 +21,17 @@ function lessonSlides(answer) {
   });
 }
 
+function readSavedMediaState(workspaceId) {
+  try { return JSON.parse(sessionStorage.getItem(`conceptflow-media-${workspaceId}`) || "null"); }
+  catch { return null; }
+}
+
 export default function StudyMediaPage({ api, workspace, requestedSourceId, requestedMode = "audio", refreshLibrary }) {
+  const [savedState] = useState(() => readSavedMediaState(workspace.id));
   const [sourceId, setSourceId] = useState(requestedSourceId || workspace.sources[0]?.id || "");
   const [mode, setMode] = useState(requestedMode);
-  const [job, setJob] = useState(null);
-  const [lesson, setLesson] = useState(null);
+  const [job, setJob] = useState(savedState?.job || null);
+  const [lesson, setLesson] = useState(savedState?.lesson || null);
   const [error, setError] = useState("");
   const [slide, setSlide] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -35,9 +41,50 @@ export default function StudyMediaPage({ api, workspace, requestedSourceId, requ
   useEffect(() => {
     const validRequest = workspace.sources.some(source => source.id === requestedSourceId);
     setSourceId(validRequest ? requestedSourceId : workspace.sources[0]?.id || "");
-    setMode(requestedMode); setLesson(null); setJob(null); setError(""); setSlide(0); stopSpeech();
-  }, [workspace.id, workspace.source_count, requestedSourceId, requestedMode]);
+    setMode(requestedMode); setError(""); setSlide(0); stopSpeech();
+  }, [workspace.id, requestedSourceId, requestedMode]);
+  useEffect(() => {
+    const restored = readSavedMediaState(workspace.id);
+    setJob(restored?.job || null); setLesson(restored?.lesson || null);
+  }, [workspace.id]);
   useEffect(() => () => { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); }, []);
+
+  useEffect(() => {
+    if (!job?.job_id) return;
+    const storageKey = `conceptflow-media-${workspace.id}`;
+    let pageHidden = false;
+    async function resume() {
+      let current = job;
+      if (current.status === "complete" && current.result) {
+        setLesson(current.result); return;
+      }
+      while (current.status === "running" && !pageHidden) {
+        reportGenerationJob(current.job_id, api, current.status);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        if (pageHidden) return;
+        try {
+          const response = await fetch(`${api}/api/tutor/overview/status?job_id=${encodeURIComponent(current.job_id)}`);
+          const data = await response.json();
+          if (!response.ok || !data.job) throw new Error(data.detail || "Could not read explanation progress.");
+          current = data.job;
+          if (pageHidden) return;
+          setJob(current);
+          sessionStorage.setItem(storageKey, JSON.stringify({ job: current, lesson: current.result || null }));
+        } catch (issue) {
+          if (!pageHidden) setError(issue.message);
+          return;
+        }
+      }
+      reportGenerationJob(current.job_id, api, current.status);
+      if (pageHidden) return;
+      if (current.status === "complete") {
+        setLesson(current.result); sessionStorage.setItem(storageKey, JSON.stringify({ job: current, lesson: current.result }));
+        await refreshLibrary();
+      } else if (current.status !== "cancelled") setError(current.error || "The explanation could not be completed.");
+    }
+    resume();
+    return () => { pageHidden = true; };
+  }, [api, workspace.id, job?.job_id]);
 
   async function generateLesson() {
     if (!sourceId) { setError("Choose one material first."); return; }
@@ -46,17 +93,10 @@ export default function StudyMediaPage({ api, workspace, requestedSourceId, requ
       const response = await fetch(`${api}/api/tutor/overview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source_ids: [sourceId], language }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || "Could not start this explanation.");
-      let current = data.job; setJob(current);
-      while (current?.status === "running") {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const statusResponse = await fetch(`${api}/api/tutor/overview/status?job_id=${encodeURIComponent(data.job.job_id)}`);
-        const status = await statusResponse.json();
-        if (!statusResponse.ok || !status.job) throw new Error("Could not read explanation progress.");
-        current = status.job; setJob(current);
-      }
-      if (current?.status !== "complete") throw new Error(current?.error || "The explanation could not be completed.");
-      setLesson(current.result); await refreshLibrary();
-    } catch (issue) { setError(issue.message); setJob(current => ({ ...current, status: "failed" })); }
+      const current = data.job; setJob(current);
+      sessionStorage.setItem(`conceptflow-media-${workspace.id}`, JSON.stringify({ job: current, lesson: null }));
+      if (current.status === "complete") { setLesson(current.result); sessionStorage.setItem(`conceptflow-media-${workspace.id}`, JSON.stringify({ job: current, lesson: current.result })); await refreshLibrary(); }
+    } catch (issue) { setError(issue.message); }
   }
 
   function stopSpeech() { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); setPlaying(false); }

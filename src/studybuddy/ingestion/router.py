@@ -30,7 +30,8 @@ class ParsedMaterial:
 
 
 def parse_study_file(
-    path: str | Path, *, source_id: str, source_name: str, source_uri: str | None, archive_depth: int = 0,
+    path: str | Path, *, source_id: str, source_name: str, source_uri: str | None,
+    archive_depth: int = 0, content_sha256: str | None = None,
 ) -> ParsedMaterial:
     file_path = Path(path)
     suffix = file_path.suffix.lower()
@@ -82,6 +83,7 @@ def parse_study_file(
         segments = transcribe_video(
             file_path, source_id=source_id, source_name=source_name, source_uri=source_uri,
             model_size=os.getenv("WHISPER_MODEL", "base"), source_type=source_type,
+            content_sha256=content_sha256,
         )
         return ParsedMaterial(source_type.value, segments)
     raise ValueError("Unsupported file type.")
