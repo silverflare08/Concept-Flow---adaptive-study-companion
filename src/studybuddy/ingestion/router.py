@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 from .documents import ingest_csv_document, ingest_docx, ingest_odt_document, ingest_rtf_document, ingest_text_document
 from .images import describe_study_image, ingest_image
@@ -32,6 +33,7 @@ class ParsedMaterial:
 def parse_study_file(
     path: str | Path, *, source_id: str, source_name: str, source_uri: str | None,
     archive_depth: int = 0, content_sha256: str | None = None,
+    on_progress: Callable[[float, float], None] | None = None,
 ) -> ParsedMaterial:
     file_path = Path(path)
     suffix = file_path.suffix.lower()
@@ -84,6 +86,7 @@ def parse_study_file(
             file_path, source_id=source_id, source_name=source_name, source_uri=source_uri,
             model_size=os.getenv("WHISPER_MODEL", "base"), source_type=source_type,
             content_sha256=content_sha256,
+            on_progress=on_progress,
         )
         return ParsedMaterial(source_type.value, segments)
     raise ValueError("Unsupported file type.")

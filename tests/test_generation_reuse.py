@@ -12,6 +12,46 @@ def chunk(text="A definition of energy."):
                           citation=CitationAnchor(source_id="energy", source_name="Physics", source_type=SourceType.PDF, page=1))
 
 
+def test_tutor_response_cache_includes_evidence_and_model(tmp_path, monkeypatch):
+    monkeypatch.setenv("CONCEPTFLOW_CACHE_DIR", str(tmp_path))
+    calls = []
+    def response(request, **kwargs):
+        calls.append(request)
+        return io.BytesIO(json.dumps({"message": {"content": "Source-backed explanation."}}).encode())
+    monkeypatch.setattr(grounded, "urlopen", response)
+    assert grounded.call_ollama("Evidence A") == grounded.call_ollama("Evidence A")
+    assert len(calls) == 1
+    grounded.call_ollama("Evidence B")
+    monkeypatch.setenv("OLLAMA_MODEL", "changed-model")
+    grounded.call_ollama("Evidence A")
+    assert len(calls) == 3
+
+
+def test_prerequisite_pass_uses_short_constrained_output(monkeypatch):
+    calls = []
+    def response(request, **kwargs):
+        calls.append(json.loads(request.data))
+        return io.BytesIO(json.dumps({"message": {"content": '{"prerequisite_edges": []}'}}).encode())
+    monkeypatch.setattr(grounded, "urlopen", response)
+    grounded.call_ollama_json('Review these extracted course concepts\nCONCEPTS:\n[{"concept_id": "a"}, {"concept_id": "b"}]')
+    assert calls[0]["options"]["num_predict"] == 350
+    edge = calls[0]["format"]["properties"]["prerequisite_edges"]["items"]
+    assert edge["properties"]["prerequisite_id"]["enum"] == ["a", "b"]
+
+
+def test_assessment_model_override_does_not_change_guide_model(monkeypatch):
+    calls = []
+    monkeypatch.setenv("OLLAMA_MODEL", "fast-tutor")
+    monkeypatch.setenv("OLLAMA_ASSESSMENT_MODEL", "larger-assessment")
+    def response(request, **kwargs):
+        calls.append(json.loads(request.data))
+        return io.BytesIO(json.dumps({"message": {"content": '{}'}}).encode())
+    monkeypatch.setattr(grounded, "urlopen", response)
+    grounded.call_ollama_json("Create exactly 1 assessment questions for Physics.")
+    grounded.call_ollama_json("Create a study guide for Physics.")
+    assert [call["model"] for call in calls] == ["larger-assessment", "fast-tutor"]
+
+
 def draft():
     return json.dumps({"concepts": [{"concept_id": "energy", "name": "Energy", "topic": "Physics",
         "description": "A source-backed definition.", "evidence_chunk_ids": ["energy-1"],

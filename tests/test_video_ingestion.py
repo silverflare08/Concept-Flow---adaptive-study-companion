@@ -27,6 +27,7 @@ def test_transcription_reuses_content_but_rebuilds_citations(tmp_path, monkeypat
     from studybuddy.ingestion import video
     monkeypatch.setenv("CONCEPTFLOW_CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.setenv("WHISPER_BEAM_SIZE", "1")
+    monkeypatch.setenv("WHISPER_BATCH_SIZE", "1")
     calls = []
     class Model:
         def transcribe(self, path, **options):
@@ -44,3 +45,33 @@ def test_transcription_reuses_content_but_rebuilds_citations(tmp_path, monkeypat
     recording.write_bytes(b"changed media")
     video.transcribe_video(recording, source_id="c", source_name="Changed")
     assert len(calls) == 2
+
+
+def test_batched_transcription_reports_real_timestamp_progress(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from studybuddy.ingestion import video
+    monkeypatch.setenv("CONCEPTFLOW_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("WHISPER_BATCH_SIZE", "4")
+    calls, updates = [], []
+    class Runner:
+        def transcribe(self, path, **options):
+            calls.append(options)
+            return iter([SimpleNamespace(text="A wave oscillates.", start=2, end=7)]), SimpleNamespace(duration=10)
+    monkeypatch.setattr(video, "_speech_model", lambda *args: object())
+    monkeypatch.setattr(video, "_transcription_runner", lambda model, batch_size: Runner())
+    recording = tmp_path / "lecture.mp4"
+    recording.write_bytes(b"mock lecture")
+    segments = video.transcribe_video(recording, source_id="lecture", source_name="Lecture",
+                                      on_progress=lambda done, total: updates.append((done, total)))
+    assert calls[0]["batch_size"] == 4
+    assert updates == [(0, 10), (7, 10)]
+    assert segments[0].citation.end_seconds == 7
+
+
+def test_invalid_transcription_batch_size_is_rejected(tmp_path, monkeypatch):
+    from studybuddy.ingestion import video
+    monkeypatch.setenv("WHISPER_BATCH_SIZE", "0")
+    recording = tmp_path / "audio.wav"
+    recording.write_bytes(b"mock")
+    with pytest.raises(ValueError, match="WHISPER_BATCH_SIZE"):
+        video.transcribe_video(recording, source_id="a", source_name="Audio")

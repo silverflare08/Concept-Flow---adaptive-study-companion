@@ -33,7 +33,8 @@ def test_assessment_api_generates_hides_answers_grades_and_exports(monkeypatch, 
         if "Independently solve every assessment question" in prompt:
             questions = json.loads(prompt.split("QUESTIONS: ", 1)[1].split("\nEVIDENCE:", 1)[0])
             return json.dumps({"decisions": [
-                {"question_id": question["question_id"], "valid": True, "verified_answer": question["correct_answer"], "reason": "Supported"}
+                {"question_id": question["question_id"], "valid": True, "verified_answer": "Negative gradient", "reason": "Supported",
+                 "support_quote": "Gradient descent updates parameters in the negative gradient direction.", "cognitive_level": "easy"}
                 for question in questions
             ]})
         return json.dumps({
@@ -104,6 +105,7 @@ def test_recall_fallback_can_be_completed_and_updates_saved_progress(monkeypatch
         raise RuntimeError("Model unavailable")
     monkeypatch.setattr(api, "call_ollama_json", offline)
     created = api.create_assessment(api.AssessmentCreateRequest(question_count=12,
+        difficulty="easy", allow_source_recall=True,
         question_types=["mcq", "short_answer", "numerical", "true_false", "fill_blank"]))
     record = repository.get_assessment(created["id"])
     answers = {question.question_id: question.correct_answer for question in record["questions"]}

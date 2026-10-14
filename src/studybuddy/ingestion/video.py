@@ -14,7 +14,7 @@ from functools import lru_cache
 from threading import Lock
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 from .models import CitationAnchor, EvidenceKind, SourceSegment, SourceType
 from studybuddy.cancellation import check_cancelled
@@ -25,7 +25,15 @@ _model_lock = Lock()
 @lru_cache(maxsize=1)
 def _speech_model(model_size: str, device: str, compute_type: str):
     from faster_whisper import WhisperModel
-    return WhisperModel(model_size, device=device, compute_type=compute_type)
+    threads = int(os.getenv("WHISPER_CPU_THREADS", str(min(8, os.cpu_count() or 4))))
+    return WhisperModel(model_size, device=device, compute_type=compute_type, cpu_threads=max(1, threads))
+
+
+def _transcription_runner(model, batch_size: int):
+    if batch_size == 1:
+        return model
+    from faster_whisper import BatchedInferencePipeline
+    return BatchedInferencePipeline(model=model)
 
 
 @dataclass(frozen=True)
@@ -76,6 +84,7 @@ def transcribe_video(
     model_size: str | None = None,
     source_type: SourceType = SourceType.VIDEO,
     content_sha256: str | None = None,
+    on_progress: Callable[[float, float], None] | None = None,
 ) -> list[SourceSegment]:
     """Run local faster-whisper and return timestamp-cited transcript segments."""
     video_path = Path(path)
@@ -97,6 +106,9 @@ def transcribe_video(
     beam_size = int(os.getenv("WHISPER_BEAM_SIZE", "1"))
     if not 1 <= beam_size <= 10:
         raise ValueError("WHISPER_BEAM_SIZE must be between 1 and 10.")
+    batch_size = int(os.getenv("WHISPER_BATCH_SIZE", "4"))
+    if not 1 <= batch_size <= 16:
+        raise ValueError("WHISPER_BATCH_SIZE must be between 1 and 16.")
     if content_sha256 is None:
         digest = hashlib.sha256()
         with video_path.open("rb") as stream:
@@ -105,7 +117,7 @@ def transcribe_video(
                 digest.update(block)
         content_sha256 = digest.hexdigest()
     cached_path = cache_path("transcripts", {
-        "version": 1, "sha256": content_sha256, "model": model_size,
+        "version": 2, "sha256": content_sha256, "model": model_size, "batch_size": batch_size,
         "device": device, "compute_type": compute_type, "beam_size": beam_size,
     })
     spans = None
@@ -122,12 +134,21 @@ def transcribe_video(
         with _model_lock:
             check_cancelled()
             model = _speech_model(model_size, device, compute_type)
-            raw_segments, _ = model.transcribe(str(video_path), vad_filter=True, beam_size=beam_size)
+            runner = _transcription_runner(model, batch_size)
+            options = {"vad_filter": True, "beam_size": beam_size}
+            if batch_size > 1:
+                options["batch_size"] = batch_size
+            raw_segments, info = runner.transcribe(str(video_path), **options)
+            duration = float(getattr(info, "duration", 0) or 0)
+            if on_progress:
+                on_progress(0, duration)
             spans = []
             for segment in raw_segments:
                 check_cancelled()
                 if segment.text.strip():
                     spans.append(TranscriptSpan(segment.text, segment.start, segment.end))
+                if on_progress:
+                    on_progress(float(segment.end), duration)
         if spans:
             save_cached(cached_path, json.dumps([{
                 "text": span.text, "start_seconds": span.start_seconds, "end_seconds": span.end_seconds,

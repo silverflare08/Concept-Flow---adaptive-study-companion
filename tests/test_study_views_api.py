@@ -295,3 +295,18 @@ def test_slow_reader_does_not_hold_upload_response_or_navigation(monkeypatch, tm
         release.set()
         if job_id:
             wait_for_material(client, job_id)
+
+
+def test_recordings_and_documents_use_separate_reader_queues(monkeypatch, tmp_path):
+    submitted = []
+    monkeypatch.setattr(api, "submit_account_job", lambda executor, *args, **kwargs: submitted.append(executor))
+    jobs = []
+    try:
+        for filename in ["lecture.mp4", "notes.pdf", "table.xlsx", "audio.mp3"]:
+            jobs.append(api.queue_media_import(kind="upload", source_id=filename, name=filename, path=tmp_path / filename))
+        assert submitted == [api.media_executor, api.document_executor, api.document_executor, api.media_executor]
+        assert api.media_executor is not api.document_executor
+    finally:
+        for job in jobs:
+            api.media_jobs.pop(job["job_id"], None)
+            api.media_job_events.pop(job["job_id"], None)

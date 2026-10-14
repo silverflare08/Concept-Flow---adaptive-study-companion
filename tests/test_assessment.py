@@ -13,6 +13,10 @@ from studybuddy.assessment import (
     parse_assessment_draft,
     question_fingerprint,
     question_similarity,
+    verify_question_set,
+    question_quality_problem,
+    evaluate_numeric_expression,
+    validate_new_question_structure,
 )
 from studybuddy.ingestion.models import CitationAnchor, KnowledgeChunk, SourceType
 
@@ -52,7 +56,8 @@ def mcq_payload(prompt: str = "Which direction does gradient descent use?") -> d
 def verifier(prompt: str) -> str:
     questions = json.loads(prompt.split("QUESTIONS: ", 1)[1].split("\nEVIDENCE:", 1)[0])
     return json.dumps({"decisions": [
-        {"question_id": question["question_id"], "valid": True, "verified_answer": question["correct_answer"], "reason": "Supported by the passage."}
+        {"question_id": question["question_id"], "valid": True, "verified_answer": "Negative gradient", "reason": "Supported by the passage.",
+         "support_quote": "Gradient descent updates parameters in the negative gradient direction.", "cognitive_level": question["difficulty"]}
         for question in questions
     ]})
 
@@ -62,6 +67,149 @@ def test_question_schema_rejects_invalid_mcq() -> None:
     payload["questions"][0]["options"] = ["A", "B"]
     with pytest.raises(ValueError, match="four distinct options"):
         parse_assessment_draft(json.dumps(payload), allowed_chunk_ids={"optimisation-1"})
+
+
+def test_label_only_mcq_cannot_bypass_source_checks():
+    payload = mcq_payload()
+    item = payload["questions"][0]
+    item.update(options=["A", "B", "C", "D"], correct_answer="D")
+    with pytest.raises(ValueError, match="actual answer choices"):
+        parse_assessment_draft(json.dumps(payload), allowed_chunk_ids={"optimisation-1"})
+
+
+def test_independent_solver_never_receives_the_proposed_key_or_explanation():
+    question = AssessmentQuestion.model_validate(mcq_payload()["questions"][0])
+    def independent(prompt):
+        data = json.loads(prompt.split("QUESTIONS: ", 1)[1].split("\nEVIDENCE:", 1)[0])[0]
+        assert "correct_answer" not in data and "explanation" not in data and "grading_criteria" not in data
+        return json.dumps({"decisions": [{"question_id": "1", "valid": True, "verified_answer": "Negative gradient",
+            "support_quote": "Gradient descent updates parameters in the negative gradient direction.",
+            "cognitive_level": "easy", "reason": "The quoted update rule specifies the direction."}]})
+    result = verify_question_set([question], {"optimisation-1": chunk()}, verify_json=independent)
+    assert result[question.question_id][0]
+
+
+@pytest.mark.parametrize("quote,level", [("Invented support that does not appear in the source.", "easy"),
+                                         ("Gradient descent updates parameters in the negative gradient direction.", "hard")])
+def test_verifier_rejects_invented_support_or_wrong_difficulty(quote, level):
+    question = AssessmentQuestion.model_validate(mcq_payload()["questions"][0])
+    result = verify_question_set([question], {"optimisation-1": chunk()}, verify_json=lambda prompt: json.dumps({
+        "decisions": [{"question_id": "1", "valid": True, "verified_answer": "Negative gradient",
+                       "support_quote": quote, "cognitive_level": level, "reason": "Supported"}]}))
+    assert not result[question.question_id][0]
+
+
+def test_medium_exam_does_not_silently_turn_into_copied_recall():
+    def offline(prompt):
+        raise RuntimeError("Unavailable")
+    with pytest.raises(ValueError, match="No questions passed"):
+        generate_assessment(course_name="ML", chunks=[chunk()], count=3, difficulty="medium", question_types=["mcq"],
+            scope=[], previous_prompts=[], generate_json=offline, verify_json=offline)
+
+
+def test_copied_passage_is_not_a_medium_reasoning_question():
+    question = AssessmentQuestion.model_validate(mcq_payload()["questions"][0])
+    question.difficulty = "medium"
+    question.prompt = "Explain this: Gradient descent updates parameters in the negative gradient direction."
+    assert "copies" in question_quality_problem(question, {"optimisation-1": chunk()}, "medium")
+
+
+@pytest.mark.parametrize("expression", ["20", "__import__('os').system('anything')", "x*5", "2**1000000", "1/0"])
+def test_numeric_verification_never_executes_code_or_accepts_asserted_results(expression):
+    with pytest.raises((ValueError, ZeroDivisionError)):
+        evaluate_numeric_expression(expression)
+
+
+def test_numeric_verification_recomputes_products_and_multi_step_results():
+    assert evaluate_numeric_expression("2 * 5") == 10
+    assert evaluate_numeric_expression("0.5 * 2 * (3 * 4)**2") == 144
+
+
+def test_model_cannot_bypass_numerical_checks_with_a_huge_tolerance():
+    with pytest.raises(ValueError):
+        validate_new_question_structure(AssessmentQuestion(question_type="numerical", prompt="Calculate 2 * 5.", topic="Arithmetic", difficulty="medium",
+                           correct_answer="20", explanation="An explanation.", evidence_chunk_ids=["optimisation-1"], numerical_tolerance=100))
+
+
+def test_historical_label_only_papers_remain_readable_but_cannot_be_new_drafts():
+    item = mcq_payload()["questions"][0]
+    item.update(options=["A", "B", "C", "D"], correct_answer="D")
+    saved_question = AssessmentQuestion.model_validate(item)
+    assert saved_question.correct_answer == "D"
+    with pytest.raises(ValueError, match="actual answer choices"):
+        validate_new_question_structure(saved_question)
+
+
+def test_answer_key_must_agree_with_its_own_worked_calculation():
+    question = AssessmentQuestion.model_validate(mcq_payload()["questions"][0])
+    question.options = ["10 m/s", "20 m/s", "30 m/s", "40 m/s"]
+    question.correct_answer = "20 m/s"
+    question.explanation = "For a car accelerating from rest, use the source rule v = a*t. Substitute the stated acceleration and time: 2 * 5 = 10 m/s. This gives the final speed."
+    assert "contradicts" in question_quality_problem(question, {"optimisation-1": chunk()}, "easy")
+
+
+def test_blind_verifier_cannot_claim_twenty_for_two_times_five():
+    material = chunk().model_copy(update={"text": "For constant acceleration from rest, final speed is v = a*t."})
+    question = AssessmentQuestion.model_validate(mcq_payload()["questions"][0])
+    question.prompt = "Calculate the speed after 5 seconds at a constant acceleration of 2 m/s squared from rest."
+    question.difficulty = "medium"
+    question.options = ["10 m/s", "20 m/s", "30 m/s", "40 m/s"]
+    question.correct_answer = "20 m/s"
+    result = verify_question_set([question], {"optimisation-1": material}, verify_json=lambda prompt: json.dumps({
+        "decisions": [{"question_id": "1", "valid": True, "verified_answer": "20 m/s", "calculation": "2 * 5",
+                       "support_quote": material.text, "cognitive_level": "medium", "reason": "Computed"}]}))
+    assert not result[question.question_id][0]
+
+
+def test_numeric_solver_expression_takes_precedence_over_model_mental_arithmetic():
+    material = chunk().model_copy(update={"text": "Kinetic energy is K = 0.5*m*v*v in joules."})
+    question = AssessmentQuestion(question_type="numerical", prompt="Calculate kinetic energy for mass 1000 kg and speed 20 m/s.",
+        topic="Mechanics", difficulty="medium", correct_answer="200000", explanation="A sufficiently detailed worked explanation.", evidence_chunk_ids=["optimisation-1"])
+    result = verify_question_set([question], {"optimisation-1": material}, verify_json=lambda prompt: json.dumps({
+        "decisions": [{"question_id": "1", "valid": True, "verified_answer": "20000 Joules", "calculation": "0.5 * 1000 * (20^2)",
+                       "support_quote": material.text, "cognitive_level": "medium", "reason": "Apply the cited rule."}]}))
+    assert result[question.question_id][0]
+    assert float(result[question.question_id][2]) == 200000
+
+
+def test_negated_short_answer_cannot_pass_on_keyword_overlap():
+    item = mcq_payload()["questions"][0]
+    item.update(question_type="short_answer", options=[], correct_answer="Gradient descent does not update parameters in the negative gradient direction.",
+                grading_criteria=["Explain the update direction"])
+    with pytest.raises(ValueError, match="No questions passed"):
+        generate_assessment(course_name="ML", chunks=[chunk()], count=1, difficulty="easy", question_types=["short_answer"],
+            scope=[], previous_prompts=[], generate_json=lambda prompt: json.dumps({"title": "Check", "questions": [item]}), verify_json=verifier)
+
+
+def test_question_cannot_omit_a_condition_from_its_supporting_rule():
+    material = chunk().model_copy(update={"text": "With an adjacency list, BFS takes O(V + E) time."})
+    question = AssessmentQuestion.model_validate(mcq_payload()["questions"][0])
+    question.prompt = "Given an unweighted graph, determine the time complexity of BFS."
+    result = verify_question_set([question], {"optimisation-1": material}, verify_json=lambda prompt: json.dumps({
+        "decisions": [{"question_id": "1", "valid": True, "verified_answer": "O(V + E)", "calculation": "",
+                       "support_quote": material.text, "cognitive_level": "easy", "reason": "Supported"}]}))
+    assert not result[question.question_id][0]
+
+
+def test_sourced_numerical_expression_repairs_arithmetic_but_not_invented_inputs():
+    material = chunk().model_copy(update={"text": "Kinetic energy is K = 0.5*m*v*v in joules."})
+    for expression, accepted in [("0.5 * 1000 * (20^2)", True), ("0.5 * 9000 * (20^2)", False)]:
+        question = AssessmentQuestion(question_type="numerical", prompt="Calculate kinetic energy for mass 1000 kg and speed 20 m/s.",
+            topic="Mechanics", difficulty="medium", correct_answer="40000", explanation="An incorrect calculation in the draft.", evidence_chunk_ids=["optimisation-1"])
+        result = verify_question_set([question], {"optimisation-1": material}, verify_json=lambda prompt: json.dumps({
+            "decisions": [{"question_id": "1", "valid": True, "verified_answer": "20000", "calculation": expression,
+                           "support_quote": material.text, "cognitive_level": "medium", "reason": "Apply source rule"}]}))
+        assert result[question.question_id][0] is accepted
+        if accepted:
+            assert question.correct_answer == "200000"
+            assert "= 200000" in question.explanation
+
+
+def test_large_numerical_answers_do_not_allow_one_percent_scoring_error():
+    question = AssessmentQuestion(question_type="numerical", prompt="Calculate the kinetic energy.", topic="Mechanics", difficulty="medium",
+        correct_answer="200000", explanation="Use the given mass and speed in the energy formula.", evidence_chunk_ids=["optimisation-1"], numerical_tolerance=0.01)
+    assert grade_objective(question, "200000").correct
+    assert not grade_objective(question, "199000").correct
 
 
 def test_question_schema_rejects_unknown_source_chunk() -> None:
@@ -104,6 +252,7 @@ def test_generation_fills_missing_slots_with_source_checked_recall() -> None:
         return json.dumps(mcq_payload())
 
     draft = generate_assessment(
+        allow_source_recall=True,
         course_name="Machine Learning",
         chunks=[chunk()],
         count=3,
@@ -134,7 +283,7 @@ def test_model_failure_preserves_requested_format_and_count_when_source_supports
         raise RuntimeError("Local model unavailable")
 
     draft = generate_assessment(course_name="Physics", chunks=[material], count=5,
-        difficulty="medium", question_types=[kind], scope=[], previous_prompts=[],
+        difficulty="easy", question_types=[kind], scope=[], previous_prompts=[], allow_source_recall=True,
         generate_json=offline, verify_json=offline, generation_status=status)
 
     assert len(draft.questions) == 5
@@ -163,7 +312,7 @@ def test_mixed_request_keeps_every_selected_format_on_model_failure() -> None:
         raise RuntimeError("Local model unavailable")
     kinds = ["mcq", "short_answer", "numerical", "true_false", "fill_blank"]
     draft = generate_assessment(course_name="Physics", chunks=[material], count=12,
-        difficulty="medium", question_types=kinds, scope=[], previous_prompts=[],
+        difficulty="easy", question_types=kinds, scope=[], previous_prompts=[], allow_source_recall=True,
         generate_json=offline, verify_json=offline)
     assert len(draft.questions) == 12
     assert {question.question_type for question in draft.questions} == set(kinds)

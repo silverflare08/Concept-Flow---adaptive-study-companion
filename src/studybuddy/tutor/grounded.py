@@ -116,6 +116,10 @@ def call_ollama(prompt: str) -> str:
     """Ask the configured local Ollama model for a non-streaming response."""
     endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
     model = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
+    response_path = cache_path("tutor-responses", {"version": 1, "prompt": prompt, "model": model, "endpoint": endpoint})
+    cached = read_cached(response_path)
+    if cached:
+        return cached
     payload = json.dumps(
         {
             "model": model,
@@ -134,6 +138,8 @@ def call_ollama(prompt: str) -> str:
     answer = body.get("message", {}).get("content", "").strip()
     if not answer:
         raise RuntimeError("The local tutor model returned an empty answer.")
+    if body.get("done_reason") != "length":
+        save_cached(response_path, answer)
     return answer
 
 
@@ -142,6 +148,8 @@ def call_ollama_json(prompt: str) -> str:
     """Ask local Ollama for a JSON-only response used by structured features."""
     endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
     model = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
+    if prompt.startswith(("Create exactly", "Rewrite this VERIFIED assessment", "Independently solve every assessment question", "Grade these student answers", "Analyse incorrect objective answers")):
+        model = os.getenv("OLLAMA_ASSESSMENT_MODEL") or model
     output_format: object = "json"
     num_predict = 2400
     request_timeout = 180
@@ -161,13 +169,29 @@ def call_ollama_json(prompt: str) -> str:
             output_format["properties"]["questions"].update(minItems=count, maxItems=count)
             question_schema = output_format["$defs"]["AssessmentQuestion"]
             question_schema["properties"].pop("question_id", None)
+            question_schema["properties"]["numerical_tolerance"]["anyOf"][0]["maximum"] = 0.01
             question_schema["required"] = list(dict.fromkeys(question_schema["required"] + ["options", "evidence_chunk_ids"]))
+            requested_level = re.search(r"\nDifficulty: (easy|medium|hard)", prompt)
+            if requested_level:
+                question_schema["properties"]["difficulty"] = {"const": requested_level.group(1)}
             kinds = re.search(r"Allowed question types: (\[[^\n]+\])", prompt)
             if kinds:
                 allowed_types = json.loads(kinds.group(1))
                 question_schema["properties"]["question_type"]["enum"] = allowed_types
                 if allowed_types == ["mcq"]:
-                    question_schema["properties"]["options"].update(minItems=4, maxItems=4)
+                    question_schema["properties"]["options"].update(minItems=4, maxItems=4, items={"type": "string", "minLength": 2})
+                    question_schema["properties"]["correct_answer"]["minLength"] = 2
+                elif allowed_types == ["true_false"]:
+                    question_schema["properties"]["options"] = {"type": "array", "minItems": 2, "maxItems": 2,
+                        "items": {"type": "string", "enum": ["True", "False"]}}
+                    question_schema["properties"]["correct_answer"] = {"type": "string", "enum": ["True", "False"]}
+                elif len(allowed_types) == 1:
+                    question_schema["properties"]["options"] = {"type": "array", "maxItems": 0, "items": {"type": "string"}}
+                    if allowed_types == ["short_answer"]:
+                        question_schema["required"].append("grading_criteria")
+                        question_schema["properties"]["grading_criteria"].update(minItems=1, maxItems=4)
+                    elif allowed_types == ["numerical"]:
+                        question_schema["properties"]["correct_answer"] = {"type": "string", "pattern": r"^-?\d+(\.\d+)?$"}
             ids = list(dict.fromkeys(re.findall(r"CHUNK_ID: ([^\n]+)", prompt)))
             if ids:
                 question_schema["properties"]["evidence_chunk_ids"].update(minItems=1, maxItems=2, items={"type": "string", "enum": ids})
@@ -193,7 +217,7 @@ def call_ollama_json(prompt: str) -> str:
         questions_text = prompt.split("QUESTIONS: ", 1)[1].split("\nEVIDENCE:", 1)[0]
         questions = json.loads(questions_text)
         question_ids = list(dict.fromkeys(str(item["question_id"]) for item in questions))
-        num_predict = 200 + 180 * len(question_ids)
+        num_predict = 200 + 350 * len(question_ids)
         output_format = {
             "type": "object",
             "properties": {
@@ -207,9 +231,12 @@ def call_ollama_json(prompt: str) -> str:
                             "question_id": {"type": "string", "enum": question_ids},
                             "valid": {"type": "boolean"},
                             "verified_answer": {"type": "string"},
-                            "reason": {"type": "string"},
+                            "reason": {"type": "string", "maxLength": 400},
+                            "support_quote": {"type": "string", "minLength": 20, "maxLength": 350},
+                            "cognitive_level": {"type": "string", "enum": ["easy", "medium", "hard"]},
+                            "calculation": {"type": "string", "maxLength": 200},
                         },
-                        "required": ["question_id", "valid", "verified_answer", "reason"],
+                        "required": ["question_id", "valid", "verified_answer", "reason", "support_quote", "cognitive_level", "calculation"],
                         "additionalProperties": False,
                     },
                 },
@@ -242,13 +269,33 @@ def call_ollama_json(prompt: str) -> str:
         ids = list(dict.fromkeys(re.findall(r"CHUNK_ID: ([^\n]+)", prompt)))
         if ids:
             concept_schema["properties"]["evidence_chunk_ids"].update(minItems=1, items={"type": "string", "enum": ids})
+    elif prompt.startswith("Review these extracted course concepts"):
+        # This pass only needs edges, not another long lesson or duplicated map.
+        # Constrain IDs to avoid an expensive second pass for malformed links.
+        concepts = json.loads(prompt.split("\nCONCEPTS:\n", 1)[1].split("\nYour previous", 1)[0])
+        ids = [concept["concept_id"] for concept in concepts]
+        num_predict = min(2400, max(350, 100 + 70 * len(ids)))
+        output_format = {"type": "object", "properties": {"prerequisite_edges": {
+            "type": "array", "items": {"type": "object", "properties": {
+                "prerequisite_id": {"type": "string", "enum": ids},
+                "dependent_id": {"type": "string", "enum": ids},
+            }, "required": ["prerequisite_id", "dependent_id"], "additionalProperties": False},
+        }}, "required": ["prerequisite_edges"], "additionalProperties": False}
+    messages = [{"role": "user", "content": prompt}]
+    if prompt.startswith("Create exactly"):
+        messages.insert(0, {"role": "system", "content": (
+            "You write carefully sourced exam questions. Follow the supplied JSON schema exactly. "
+            "Medium and hard questions require a scenario or reasoning, not asking for a definition. "
+            "All MCQ option texts belong in options, not in prompt. No option letters. "
+            "Use only the supplied sources and do not copy their existing revision questions."
+        )})
     payload = json.dumps(
         {
             "model": model,
             "stream": False,
             "keep_alive": "10m",
             "format": output_format,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "options": {"temperature": 0, "num_ctx": 8192, "num_predict": num_predict, "repeat_penalty": 1.1},
         }
     ).encode("utf-8")

@@ -115,6 +115,7 @@ def check_job_owner(job):
 guide_executor = ThreadPoolExecutor(max_workers=1)
 overview_executor = ThreadPoolExecutor(max_workers=1)
 media_executor = ThreadPoolExecutor(max_workers=2)
+document_executor = ThreadPoolExecutor(max_workers=2)
 overview_jobs: dict[str, dict[str, object]] = {}
 guide_jobs: dict[str, dict[str, object]] = {}
 media_jobs: dict[str, dict[str, object]] = {}
@@ -203,6 +204,7 @@ class OverviewRequest(BaseModel):
 
 
 class AssessmentCreateRequest(BaseModel):
+    allow_source_recall: bool = False
     scope: list[str] = Field(default_factory=list, max_length=12)
     source_ids: list[str] = Field(default_factory=list, max_length=100)
     question_count: int = Field(default=5, ge=1, le=12)
@@ -276,6 +278,10 @@ def run_media_import_job(
         media_job_events.pop(job_id, None)
         return
     token = current_cancel.set(event)
+    def transcription_progress(done: float, total: float) -> None:
+        job.update(stage="transcribing", processed_seconds=round(done, 1), duration_seconds=round(total, 1))
+        if total > 0:
+            job["progress"] = min(99, int(100 * done / total))
     try:
         stored_path = path
         if kind == "youtube":
@@ -292,6 +298,7 @@ def run_media_import_job(
                 segments = transcribe_video(
                     stored_path, source_id=source_id, source_name=name,
                     source_uri=source_uri, source_type=SourceType.VIDEO,
+                    on_progress=transcription_progress,
                 )
             material_kind = "youtube video"
         elif kind == "url":
@@ -315,7 +322,7 @@ def run_media_import_job(
                 stored_path.parent.mkdir(parents=True, exist_ok=True)
                 stored_path.write_bytes(resource.content)
                 job.update(stage="reading")
-                parsed = parse_study_file(stored_path, source_id=source_id, source_name=name, source_uri=resource.final_url)
+                parsed = parse_study_file(stored_path, source_id=source_id, source_name=name, source_uri=resource.final_url, on_progress=transcription_progress)
                 segments, material_kind = parsed.segments, parsed.kind
             job.update(name=name)
         else:
@@ -325,16 +332,18 @@ def run_media_import_job(
             parsed = parse_study_file(
                 stored_path, source_id=source_id, source_name=name, source_uri=source_uri,
                 content_sha256=content_sha256,
+                on_progress=transcription_progress,
             )
             segments, material_kind = parsed.segments, parsed.kind
         if event.is_set() or job.get("status") == "cancelled":
             job.update(status="cancelled", error="Stopped by you.")
             return
+        job.update(stage="indexing")
         source = add_indexed_material(
             source_id=source_id, name=name, kind=material_kind, segments=segments,
             stored_path=stored_path,
         )
-        job.update(status="complete", stage="ready", source=source, workspace=workspace_summary())
+        job.update(status="complete", stage="ready", progress=100, source=source, workspace=workspace_summary())
     except Exception as error:
         job.update(status="cancelled" if event.is_set() else "failed", error="Stopped by you." if event.is_set() else str(error))
     finally:
@@ -354,8 +363,10 @@ def queue_media_import(
     }
     media_jobs[str(job["job_id"])] = job
     media_job_events[str(job["job_id"])] = Event()
+    # Long recordings cannot occupy all the slots needed by ordinary documents.
+    executor = media_executor if kind == "youtube" or (path and path.suffix.lower() in AUDIO_TYPES | VIDEO_TYPES) else document_executor
     submit_account_job(
-        media_executor, run_media_import_job, job, kind=kind, path=path,
+        executor, run_media_import_job, job, kind=kind, path=path,
         source_id=source_id, name=name, source_uri=source_uri, url=url,
         content_sha256=content_sha256,
     )
@@ -1037,12 +1048,14 @@ def create_assessment(request: AssessmentCreateRequest) -> dict[str, object]:
             verify_json=call_ollama_json,
             language=request.language,
             generation_status=generation_status,
+            allow_source_recall=request.allow_source_recall,
         )
         assessment_id = repository.save_assessment(
             workspace.course_id,
             draft,
             config={
                 **request.model_dump(),
+                "question_validation_version": 2,
                 "adaptive_scope": adaptive_scope,
                 **generation_status,
             },
