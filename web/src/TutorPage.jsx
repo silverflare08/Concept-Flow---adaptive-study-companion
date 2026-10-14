@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import LanguageSelector from "./LanguageSelector.jsx";
 import { ArrowRight, BookOpenCheck, CircleHelp, FolderPlus, MessageSquarePlus, MessageSquareText, Sparkles, Square, Volume2 } from "lucide-react";
 import { SourceReferences } from "./StudyViews.jsx";
 import WorkingState from "./WorkingState.jsx";
@@ -44,6 +45,5 @@ export default function TutorPage({ api, workspace, query, setQuery, askTutor, s
 }
 
 function LanguageChoice({ language, setLanguage }) {
-  const choices = [["english", "English"], ["hindi", "हिंदी"], ["hinglish", "Hinglish"]];
-  return <section className="glass-card flex flex-wrap items-center justify-between gap-3 p-4"><div><p className="text-sm font-bold">Explanation language</p><p className="text-xs text-slate-500">Change this before asking or creating a complete lesson.</p></div><div className="flex rounded-xl bg-slate-100 p-1">{choices.map(([value, label]) => <button key={value} onClick={() => setLanguage(value)} className={`rounded-lg px-3 py-2 text-xs font-bold ${language === value ? "bg-white text-plum shadow-sm" : "text-slate-500"}`}>{label}</button>)}</div></section>;
+  return <LanguageSelector value={language} onChange={setLanguage} label="Explanation language"/>;
 }

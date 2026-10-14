@@ -291,7 +291,7 @@ def tutor_answer(
         answer = generate(rewrite_prompt(answer, language))
         if not matches_requested_language(answer, language):
             raise RuntimeError(
-                f"The local model did not follow the selected {language.title()} language. Please try again."
+                f"The local model did not follow the selected {language.title()} language. Hindi and Hinglish are experimental; try English."
             )
     return TutorReply(
         answer=answer,

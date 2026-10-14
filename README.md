@@ -14,7 +14,7 @@ It keeps your learning connected and organised, so you can focus on understandin
 - **Source-grounded tutoring**
   - Ask questions or generate lessons from selected material.
   - Open citations at the original page, slide or recording timestamp.
-  - Choose English, Hindi or Romanised Hinglish, with typeset maths.
+  - Use English by default, with experimental Hindi and Romanised Hinglish options and typeset maths.
 
 - **Revision and assessment**
   - Generate learning flows, revision maps and flashcards.
@@ -35,6 +35,10 @@ It keeps your learning connected and organised, so you can focus on understandin
   - Choose an avatar, theme, text size and study defaults.
 
 See the [supported file formats](docs/supported-formats.md).
+
+## Screenshots
+
+Application screenshots are added in [docs/images](docs/images). It include the welcome page, study dashboard, cited tutor responses, revision maps and assessment reports.
 
 ## Tech stack
 
@@ -123,6 +127,8 @@ On macOS/Linux, use `python3.11` if needed. On Windows, if your global Python co
 4. Take an assessment and check **Progress**.
 5. Revisit or download saved work in **History**.
 6. Open your profile icon to personalise settings.
+
+English is the default explanation language. Hindi and Romanised Hinglish are labelled **Experimental** in the language selector and profile settings. Output quality varies with the material and local model; source excerpts and transcripts retain their original language. Use English if a requested language cannot be generated reliably.
 
 ## Configuration
 

@@ -18,6 +18,10 @@ Full lessons reject truncated or repetitive drafts, then use a separate source-c
 
 Mind maps and learning flows reuse validated guide results and individual validated batches. Approved lesson-comparison results have a separate cache keyed by evidence, lesson, prompt and model configuration. Cache entries are revalidated on reading; an offline fallback is not cached as a completed AI guide. Exact adjacent chunk overlap at the same citation is compacted in model context only, retaining every evidence ID. Source changes or model configuration changes invalidate reuse. Chat, question drafting and grading remain separate from these static caches.
 
+## Explanation languages
+
+English is the default. A shared frontend selector labels Hindi and Romanised Hinglish as experimental, including the saved profile preference. Generation prompts request the selected language, and language checks can trigger a retry or a visible failure notice. These checks do not guarantee translation quality. Source-excerpt fallbacks and audio/video transcripts preserve the original source language rather than presenting them as translated lessons.
+
 ## Assessments and personalization
 
 Questions are drafted and checked against cited evidence. Stored fingerprints help avoid repeated questions. Answers and reports persist, and Bayesian Knowledge Tracing updates topic mastery from assessment answers and grounded learning activity.

@@ -249,7 +249,7 @@ ASSESSMENT JSON:
                     "not only the title. Preserve the locked answer key and source IDs."
                 ),
             )
-        raise ValueError(f"The local model did not return the assessment in {language.title()}.")
+        raise ValueError(f"The local model did not return the assessment in {language.title()}. Hindi and Hinglish are experimental; try English.")
     return localized
 
 

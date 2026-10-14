@@ -98,7 +98,7 @@ def generate_material_overview(
             if language != "english" and not matches_requested_language(lesson, language):
                 lesson = generate(rewrite_prompt(lesson, language)).strip()
                 if not matches_requested_language(lesson, language):
-                    raise ValueError(f"The model did not return the selected {language} language.")
+                    raise ValueError(f"The model did not return the selected {language} language. Hindi and Hinglish are experimental; try English.")
             if verify is not None:
                 evidence = "\n\n".join(f"{chunk.citation.label()}\n{text}" for chunk, text in zip(batch, evidence_texts(batch)))
                 try:
