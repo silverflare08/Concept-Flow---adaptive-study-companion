@@ -17,3 +17,18 @@ button, input { font: inherit; }
   .working-card { @apply flex items-center gap-4 rounded-2xl border border-lavender/70 bg-gradient-to-r from-lilac/70 via-white to-mint/50 p-4 shadow-soft; }
   .working-dot { @apply h-2 w-2 animate-bounce rounded-full bg-plum/70; }
 }
+
+.study-orbit { position: relative; display: grid; place-items: center; width: 68px; height: 68px; flex-shrink: 0; }
+.study-orbit-track { position: absolute; inset: 5px; border: 1px solid #d7cbe9; border-radius: 50%; }
+.study-orbit-core { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 15px; color: #71529a; background: linear-gradient(135deg,#fff,#f0eafa); box-shadow: 0 4px 14px #71529a15; animation: study-breathe 3s ease-in-out infinite; }
+.study-orbit-ring { position: absolute; inset: 5px; border-radius: 50%; animation: study-orbit 5s linear infinite; }
+.study-orbit-ring i { position: absolute; width: 9px; height: 9px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 5px #71529a20; }
+.study-orbit-ring i:nth-child(1) { left: calc(50% - 4px); top: -4px; background: #a48ac8; }
+.study-orbit-ring i:nth-child(2) { right: 0; bottom: 8px; background: #88cbb4; }
+.study-orbit-ring i:nth-child(3) { left: 0; bottom: 8px; background: #e7b69e; }
+.study-loading-line { margin-top: 12px; height: 4px; max-width: 240px; overflow: hidden; border-radius: 20px; background: #fff9; }
+.study-loading-line span { display: block; height: 100%; width: 40%; border-radius: inherit; background: linear-gradient(90deg,#c3b1de,#a3d6c3); animation: study-sweep 2.6s ease-in-out infinite; }
+@keyframes study-orbit { to { transform: rotate(360deg); } }
+@keyframes study-breathe { 50% { transform: scale(.94); } }
+@keyframes study-sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+@media (prefers-reduced-motion: reduce) { .study-orbit-ring, .study-orbit-core, .study-loading-line span { animation: none; } }

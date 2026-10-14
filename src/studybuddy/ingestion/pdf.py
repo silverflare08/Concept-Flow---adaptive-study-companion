@@ -87,7 +87,7 @@ def ingest_pdf(
                 rendered_page = rendered_document[page_number - 1]
                 page_area = max(rendered_page.rect.get_area(), 1)
                 raster_area = sum(pymupdf.Rect(image["bbox"]).get_area() for image in rendered_page.get_image_info())
-                needs_vision = len(text) < 80 or raster_area / page_area > 0.5
+                needs_vision = not text or raster_area / page_area > 0.5
                 if needs_vision:
                     image_dir.mkdir(parents=True, exist_ok=True)
                     scan_path = image_dir / f"{source_id}-p{page_number}-scan.png"

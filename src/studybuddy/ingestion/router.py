@@ -12,14 +12,15 @@ from .models import SourceSegment, SourceType
 from .pdf import ingest_pdf
 from .slides import ingest_slides
 from .video import transcribe_video
+from .extended import EXTENDED_TYPES, read_extended
 
 PDF_TYPES = {".pdf"}
 SLIDE_TYPES = {".pptx"}
-DOCUMENT_TYPES = {".docx", ".txt", ".md", ".csv", ".rtf", ".odt"}
+DOCUMENT_TYPES = {".docx", ".txt", ".md", ".markdown", ".csv", ".rtf", ".odt"}
 IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 AUDIO_TYPES = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"}
 VIDEO_TYPES = {".mp4", ".mov", ".mkv", ".avi", ".webm"}
-SUPPORTED_FILE_TYPES = PDF_TYPES | SLIDE_TYPES | DOCUMENT_TYPES | IMAGE_TYPES | AUDIO_TYPES | VIDEO_TYPES
+SUPPORTED_FILE_TYPES = PDF_TYPES | SLIDE_TYPES | DOCUMENT_TYPES | IMAGE_TYPES | AUDIO_TYPES | VIDEO_TYPES | EXTENDED_TYPES
 
 
 @dataclass(frozen=True)
@@ -29,10 +30,15 @@ class ParsedMaterial:
 
 
 def parse_study_file(
-    path: str | Path, *, source_id: str, source_name: str, source_uri: str | None,
+    path: str | Path, *, source_id: str, source_name: str, source_uri: str | None, archive_depth: int = 0,
 ) -> ParsedMaterial:
     file_path = Path(path)
     suffix = file_path.suffix.lower()
+    if suffix in EXTENDED_TYPES:
+        return ParsedMaterial(suffix.lstrip('.'), read_extended(
+            file_path, source_id=source_id, source_name=source_name,
+            source_uri=source_uri, depth=archive_depth,
+        ))
     if suffix in PDF_TYPES:
         parsed = ingest_pdf(
             file_path, source_id=source_id, source_name=source_name, source_uri=source_uri,
@@ -51,7 +57,7 @@ def parse_study_file(
         return ParsedMaterial("document", ingest_docx(
             file_path, source_id=source_id, source_name=source_name, source_uri=source_uri,
         ).segments)
-    if suffix in {".txt", ".md"}:
+    if suffix in {".txt", ".md", ".markdown"}:
         return ParsedMaterial("document", ingest_text_document(
             file_path, source_id=source_id, source_name=source_name, source_uri=source_uri,
         ).segments)

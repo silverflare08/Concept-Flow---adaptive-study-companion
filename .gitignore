@@ -9,11 +9,17 @@ __pycache__/
 !.env.example
 data/uploads/
 data/index/
+data/cache/
+data/**/*.tmp
 tmp/
 web/node_modules/
 web/dist/
 *.sqlite3
+*.sqlite
+*.sqlite-*
+*.sqlite3-*
 *.db
+*.db-*
 *.log
 
 # Test, type-checking, and coverage output

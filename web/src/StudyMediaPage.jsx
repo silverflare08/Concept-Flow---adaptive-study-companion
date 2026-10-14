@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { generationFetch as fetch } from "./generationFetch.js";
 import { ArrowLeft, ArrowRight, Headphones, Play, Sparkles, Square, Video, Volume2 } from "lucide-react";
 import { SourceReferences } from "./StudyViews.jsx";
 import WorkingState from "./WorkingState.jsx";

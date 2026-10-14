@@ -14,10 +14,13 @@ import mimetypes
 from pathlib import Path
 from typing import Literal
 from uuid import uuid4
+from threading import Event
+from studybuddy.cancellation import current_cancel, requests as cancellable_requests, check_cancelled, GenerationStopped
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from studybuddy.course_map import CourseMap
@@ -87,6 +90,38 @@ guide_executor = ThreadPoolExecutor(max_workers=1)
 overview_executor = ThreadPoolExecutor(max_workers=1)
 overview_jobs: dict[str, dict[str, object]] = {}
 app = FastAPI(title="ConceptFlow API", version="0.1.0")
+
+@app.middleware("http")
+async def cancellation_context(request, call_next):
+    request_id = request.headers.get("X-Generation-Id")
+    event = Event() if request_id else None
+    if request_id:
+        cancellable_requests[request_id] = event
+    token = current_cancel.set(event)
+    try:
+        return await call_next(request)
+    finally:
+        current_cancel.reset(token)
+        if request_id:
+            cancellable_requests.pop(request_id, None)
+
+@app.post("/api/generation/{request_id}/stop")
+def stop_request(request_id: str):
+    event = cancellable_requests.get(request_id)
+    if event:
+        event.set()
+    return {"status": "cancelled"}
+
+@app.post("/api/jobs/{job_id}/stop")
+def stop_background_job(job_id: str):
+    job = overview_jobs.get(job_id)
+    if job is None and workspace.guide_job and workspace.guide_job.get("job_id") == job_id:
+        job = workspace.guide_job
+    if job is None:
+        raise HTTPException(status_code=404, detail="Generation not found.")
+    if job.get("status") == "running":
+        job.update(status="cancelled", error="Stopped by you.")
+    return {"job": dict(job)}
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
@@ -118,6 +153,10 @@ class TutorRequest(BaseModel):
 
 class UrlMaterialRequest(BaseModel):
     url: str = Field(min_length=8, max_length=2000)
+
+
+class MaterialNotesRequest(BaseModel):
+    notes: str = Field(max_length=20000)
 
 
 class GuideRequest(BaseModel):
@@ -458,12 +497,14 @@ async def upload_materials(files: list[UploadFile] = File(...)) -> dict[str, obj
     """Save and parse arbitrary study documents into the active workspace."""
     UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
     reports: list[dict[str, object]] = []
+    upload_course_id = workspace.course_id
+    upload_revision = workspace.revision
 
     for uploaded in files:
         original_name = Path(uploaded.filename or "untitled").name
         suffix = Path(original_name).suffix.lower()
         if suffix not in SUPPORTED_FILE_TYPES:
-            reports.append({"name": original_name, "status": "unsupported", "message": "Use PDF, PPTX, DOCX, TXT, MD, image, audio, or video files."})
+            reports.append({"name": original_name, "status": "unsupported", "message": "Supported extensions: " + ', '.join(sorted(SUPPORTED_FILE_TYPES))})
             continue
 
         stored_path = UPLOAD_ROOT / f"{uuid4().hex}-{original_name}"
@@ -471,15 +512,20 @@ async def upload_materials(files: list[UploadFile] = File(...)) -> dict[str, obj
         source_id = f"source-{uuid4().hex[:12]}"
 
         try:
-            parsed = parse_study_file(
+            # Vision/transcription can take minutes; never block the async API
+            # loop, which must still serve status and cancellation requests.
+            parsed = await run_in_threadpool(parse_study_file,
                 stored_path, source_id=source_id, source_name=original_name,
                 source_uri=f"/api/sources/{source_id}",
             )
+            if workspace.course_id != upload_course_id or workspace.revision != upload_revision:
+                raise ValueError("The workspace changed while reading this file. Reupload it in the intended workspace.")
             source = add_indexed_material(
                 source_id=source_id, name=original_name, kind=parsed.kind,
                 segments=parsed.segments, stored_path=stored_path,
             )
             reports.append(source)
+            upload_revision = workspace.revision
         except Exception as error:
             reports.append({"name": original_name, "status": "failed", "message": str(error)})
 
@@ -551,6 +597,16 @@ def open_source(source_id: str, download: bool = False) -> FileResponse:
     return FileResponse(path, media_type=media_type, filename=path.name.split("-", 1)[-1])
 
 
+@app.patch("/api/materials/{source_id}/notes")
+def save_material_notes(source_id: str, request: MaterialNotesRequest) -> dict[str, object]:
+    source = next((item for item in workspace.sources if item["id"] == source_id), None)
+    if source is None:
+        raise HTTPException(status_code=404, detail="Study material not found in the active workspace.")
+    repository.save_material_notes(workspace.course_id, source_id, request.notes)
+    source["notes"] = request.notes
+    return {"notes": request.notes}
+
+
 @app.delete("/api/materials/{source_id}")
 def delete_material(source_id: str) -> dict[str, object]:
     """Archive one source from active study while retaining generated work and citations."""
@@ -615,9 +671,13 @@ def run_guide_job(
     chunks: list[KnowledgeChunk], source_ids: list[str],
 ) -> None:
     def progress(completed: int, total: int) -> None:
+        if job.get("status") == "cancelled":
+            raise GenerationStopped("Stopped by you.")
         job.update(completed_batches=completed, total_batches=total)
     try:
         generated = generate_course_map(title, chunks, generate_json=call_ollama_json, on_progress=progress)
+        if job.get("status") == "cancelled":
+            return
         if workspace.course_id != course_id or workspace.revision != revision:
             job.update(status="cancelled", error="Material changed. Generate a guide for your current material.")
             return
@@ -627,7 +687,7 @@ def run_guide_job(
         artifact_id = repository.save_course_map(course_id, generated)
         job.update(status="complete", artifact_id=artifact_id)
     except Exception as error:
-        job.update(status="failed", error=str(error))
+        job.update(status="cancelled" if isinstance(error, GenerationStopped) else "failed", error=str(error))
 
 
 @app.post("/api/study-guide/generate", status_code=202)
@@ -781,12 +841,16 @@ def run_overview_job(
     chunks: list[KnowledgeChunk], source_names: list[str], language: str,
 ) -> None:
     def progress(completed: int, total: int) -> None:
+        if job.get("status") == "cancelled":
+            raise GenerationStopped("Stopped by you.")
         job.update(completed_batches=completed, total_batches=total)
     try:
         lesson = generate_material_overview(
             title, chunks, generate=call_ollama_long, on_progress=progress,
             model_available=ollama_available(), language=language,
         )
+        if job.get("status") == "cancelled":
+            return
         question = "Teach me everything in " + (", ".join(source_names) if source_names else title)
         conversation_id = repository.save_chat_exchange(
             course_id=course_id, question=question, answer=str(lesson["answer"]),
@@ -798,7 +862,7 @@ def run_overview_job(
         repository.record_conversation_learning(course_id, topics_for_chunks(chunks, use_active_map=False))
         job.update(status="complete", result={**lesson, "conversation_id": conversation_id})
     except Exception as error:
-        job.update(status="failed", error=str(error))
+        job.update(status="cancelled" if isinstance(error, GenerationStopped) else "failed", error=str(error))
 
 
 @app.post("/api/tutor/overview", status_code=202)

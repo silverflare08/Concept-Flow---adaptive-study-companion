@@ -47,6 +47,13 @@ def test_course_sources_and_chunks_survive_repository_restart(tmp_path: Path) ->
     assert restored["chunks"][0].text.startswith("Gradient descent")
     assert restored["source_files"]["source-1"] == source_file
 
+    restarted_repository.save_material_notes(course_id, "source-1", "Revise this before Friday.\nCheck the formula.")
+    reloaded = StudyRepository(database_path).load_course(course_id)
+    assert reloaded["sources"][0]["notes"] == "Revise this before Friday.\nCheck the formula."
+    import pytest
+    with pytest.raises(ValueError, match="not found"):
+        restarted_repository.save_material_notes("different-course", "source-1", "Wrong workspace")
+
     archived_path = restarted_repository.archive_material(course_id, "source-1")
     active_view = restarted_repository.load_course(course_id)
     historical_view = restarted_repository.load_course(course_id, include_archived_materials=True)
@@ -212,6 +219,19 @@ def test_courses_and_chats_can_be_renamed_pinned_and_managed(tmp_path: Path) -> 
 
     repository.delete_conversation(chat_id)
     assert repository.get_conversation(chat_id) is None
+
+
+def test_renaming_an_older_chat_preserves_activity_timestamp_and_order(tmp_path: Path) -> None:
+    repository = StudyRepository(tmp_path / "ordering.db")
+    course = repository.create_course("Notes")
+    older = repository.save_chat_exchange(course_id=course, question="Older", answer="Answer", response_metadata={})
+    repository.save_chat_exchange(course_id=course, question="Newer", answer="Answer", response_metadata={})
+    before = repository.list_conversations(course)
+    repository.rename_conversation(older, "Renamed older chat")
+    after = repository.list_conversations(course)
+    assert [row["id"] for row in after] == [row["id"] for row in before]
+    assert [row["updated_at"] for row in after] == [row["updated_at"] for row in before]
+    assert next(row for row in after if row["id"] == older)["title"] == "Renamed older chat"
 
 
 def test_study_plans_reminders_and_daily_activity_are_persistent(tmp_path: Path) -> None:

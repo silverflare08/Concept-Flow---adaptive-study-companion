@@ -1,45 +1,31 @@
-# Architecture decisions
+# Architecture
 
-## Current implementation boundary
+ConceptFlow runs a React frontend and a local FastAPI backend. SQLite stores course records, extracted content, chats, generated artifacts, assessment results and learning events. Original uploads remain in local file storage.
 
-The current local prototype implements citation-preserving PDF/PPTX text
-ingestion, BM25 retrieval, and a grounded tutor route that calls a local Ollama
-model. The remaining sections describe decisions for planned Track D milestones
-such as video processing, visual extraction, dense retrieval, assessments, and
-evaluation. They are design commitments, not claims of completed features.
+## Material ingestion
 
-## Citation metadata is a first-class contract
+Readers produce source segments containing text and a citation. PDF pages, slide numbers, audio timestamps, spreadsheet rows and code line ranges are preserved. The chunker splits long segments while keeping each source location intact.
 
-The parser produces `SourceSegment`, never plain text. Every segment has one
-`CitationAnchor`: PDF page, slide number, or video timestamp. Visual content
-uses the anchor of its parent page/slide. The chunker never combines segments
-with different anchors, so an answer citation is evidence rather than a guessed
-label.
+Scanned PDFs and images use the local instruction vision model. Audio/video use faster-whisper. Blocking readers run in a worker thread so the API can still accept other requests.
 
-## Visual content has its own evidence path
+## Retrieval and teaching
 
-Text extraction cannot answer questions about a labelled diagram. The ingestion
-pipeline will extract embedded images where possible, obtain OCR text and a
-vision-model description, and store both as chunks linked to the parent source.
-The UI will identify visual evidence clearly so judges can verify it.
+BM25 retrieves relevant study sections. Ollama receives their evidence plus the learner context and generates an explanation. Citations are built from stored source metadata. Full-material lessons process batches of evidence in source order.
 
-## Retrieval comes before generation
+Successful vision readings and full-lesson model responses use a private disk cache. Cache keys include source content or prompt and model identity; cancelled or failed responses are not stored.
 
-We will measure BM25, dense retrieval, hybrid reciprocal-rank fusion, and
-hybrid plus reranking before connecting an LLM. This separates retrieval
-failures from generation failures and produces an honest ablation table.
+## Assessments and personalization
 
-## BKT is the adaptive baseline
+Questions are drafted and checked against cited evidence. Stored fingerprints help avoid repeated questions. Answers and reports persist, and Bayesian Knowledge Tracing updates topic mastery from assessment answers and grounded learning activity.
 
-Bayesian Knowledge Tracing has four interpretable parameters: initial mastery,
-probability of learning, guessing, and slipping. It enables a reproducible
-adaptive-vs-random learner simulation and is easier to defend than an opaque
-model trained without enough student data.
+Progress charts distinguish fixed test scores from changing mastery estimates. Calendar plans and reminders are stored separately from recorded learning activity.
 
-## Generation is constrained, verified, and auditable
+## Background work
 
-The answer service can only make claims tied to retrieved chunks; otherwise it
-abstains. The assessment generator is two-stage: create candidate items, then
-validate each answer against the cited evidence. Item fingerprints and student
-history prevent repetitions. Every prompt, retrieved chunk ID, verifier result,
-and BKT transition is logged for evaluation.
+Map and full-lesson jobs expose progress through polling. Cancellation is checked between model calls and before persistence. An inference call already running can finish before a cancellation checkpoint.
+
+## Boundaries
+
+The backend currently holds one active workspace for all connected clients. Authentication and user isolation are needed before shared hosting. Uploaded code is read without execution. SQLite inputs are read-only, and archives have size/depth limits.
+
+Video frames, full CAD reasoning and some embedded specialist visuals are outside the current extraction scope. See [supported formats](supported-formats.md). Formal RAG and personalization benchmarks remain future work.

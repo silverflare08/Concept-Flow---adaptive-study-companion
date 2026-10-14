@@ -105,6 +105,10 @@ STUDENT QUESTION: {question}
 """
 
 
+from studybuddy.cancellation import cancellable
+from studybuddy.local_cache import cache_path, read_cached, save_cached
+
+@cancellable
 def call_ollama(prompt: str) -> str:
     """Ask the configured local Ollama model for a non-streaming response."""
     endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
@@ -129,6 +133,7 @@ def call_ollama(prompt: str) -> str:
     return answer
 
 
+@cancellable
 def call_ollama_json(prompt: str) -> str:
     """Ask local Ollama for a JSON-only response used by structured features."""
     endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
@@ -154,12 +159,17 @@ def call_ollama_json(prompt: str) -> str:
     return answer
 
 
+@cancellable
 def call_ollama_long(prompt: str) -> str:
     """Generate a longer grounded lesson while keeping the model local and deterministic."""
     endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
     model = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
+    cached_path = cache_path('lessons', {'version': 1, 'model': model, 'endpoint': endpoint, 'prompt': prompt})
+    cached = read_cached(cached_path)
+    if cached is not None:
+        return cached
     payload = json.dumps({
-        "model": model, "stream": False,
+        "model": model, "stream": False, "keep_alive": "10m",
         "messages": [{"role": "user", "content": prompt}],
         "options": {"temperature": 0.1, "num_ctx": 8192, "num_predict": 1100},
     }).encode("utf-8")
@@ -172,6 +182,7 @@ def call_ollama_long(prompt: str) -> str:
     answer = body.get("message", {}).get("content", "").strip()
     if not answer:
         raise RuntimeError("The local tutor model returned an empty lesson.")
+    save_cached(cached_path, answer)
     return answer
 
 

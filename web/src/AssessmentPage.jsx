@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { generationFetch as fetch } from "./generationFetch.js";
 import {
   ArrowLeft, ArrowRight, BrainCircuit, Calculator, CheckCircle2, FileQuestion,
   Gauge, ListChecks, PenLine, RefreshCw, Sparkles, Target, Timer, XCircle, Zap,

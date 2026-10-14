@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from threading import Lock
 from pathlib import Path
 from uuid import uuid4
+from studybuddy.cancellation import check_cancelled
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, delete, func, inspect, select, text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, delete, func, inspect, select, text, update
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from studybuddy.course_map import CourseMap
@@ -16,8 +18,18 @@ from studybuddy.assessment import AssessmentDraft, AssessmentQuestion, QuestionF
 from studybuddy.tutor.bkt import update_mastery, update_mastery_from_learning_exposure
 
 
+_clock_lock = Lock()
+_last_timestamp: datetime | None = None
+
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    """Keep insert order deterministic even on coarse Windows system clocks."""
+    global _last_timestamp
+    with _clock_lock:
+        moment = datetime.now(timezone.utc)
+        if _last_timestamp is not None and moment <= _last_timestamp:
+            moment = _last_timestamp + timedelta(microseconds=1)
+        _last_timestamp = moment
+        return moment
 
 
 class Base(DeclarativeBase):
@@ -46,6 +58,7 @@ class MaterialRecord(Base):
     chunk_count: Mapped[int] = mapped_column(Integer, default=0)
     stored_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_uri: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
@@ -196,6 +209,9 @@ class StudyRepository:
             connect_args={"check_same_thread": False},
         )
         Base.metadata.create_all(self.engine)
+        if "notes" not in {column["name"] for column in inspect(self.engine).get_columns("materials")}:
+            with self.engine.begin() as connection:
+                connection.execute(text("ALTER TABLE materials ADD COLUMN notes TEXT NOT NULL DEFAULT ''"))
         columns = {column["name"] for column in inspect(self.engine).get_columns("topic_mastery")}
         if "conversation_updates" not in columns:
             with self.engine.begin() as connection:
@@ -210,6 +226,7 @@ class StudyRepository:
         course_id = uuid4().hex
         with Session(self.engine) as session:
             session.add(CourseRecord(id=course_id, name=name.strip()))
+            check_cancelled()
             session.commit()
         return course_id
 
@@ -278,6 +295,7 @@ class StudyRepository:
                         "status": material.status,
                         "chunks": material.chunk_count,
                         "downloadable": bool(material.stored_path),
+                        "notes": material.notes,
                     }
                     for material in materials
                 ],
@@ -289,6 +307,15 @@ class StudyRepository:
                 "chunks": [KnowledgeChunk.model_validate_json(row.payload_json) for row in chunk_rows],
                 "course_map": CourseMap.model_validate_json(course.course_map_json) if course.course_map_json else None,
             }
+
+    def save_material_notes(self, course_id: str, source_id: str, notes: str) -> None:
+        with Session(self.engine) as session:
+            material = session.get(MaterialRecord, source_id)
+            if material is None or material.course_id != course_id:
+                raise ValueError("Study material not found in this workspace.")
+            material.notes = notes
+            check_cancelled()
+            session.commit()
 
     def save_material(
         self,
@@ -327,6 +354,7 @@ class StudyRepository:
             ])
             course.course_map_json = None
             course.updated_at = utc_now()
+            check_cancelled()
             session.commit()
 
     def archive_material(self, course_id: str, source_id: str) -> Path | None:
@@ -342,6 +370,7 @@ class StudyRepository:
             if course:
                 course.course_map_json = None
                 course.updated_at = utc_now()
+            check_cancelled()
             session.commit()
         return stored_path
 
@@ -353,6 +382,7 @@ class StudyRepository:
                 raise ValueError("Course workspace not found.")
             if session.get(ArchivedCourseRecord, course_id) is None:
                 session.add(ArchivedCourseRecord(course_id=course_id))
+            check_cancelled()
             session.commit()
 
     def rename_course(self, course_id: str, name: str) -> None:
@@ -362,6 +392,7 @@ class StudyRepository:
                 raise ValueError("Course workspace not found.")
             course.name = name.strip()
             course.updated_at = utc_now()
+            check_cancelled()
             session.commit()
 
     def set_course_pinned(self, course_id: str, pinned: bool) -> None:
@@ -370,6 +401,7 @@ class StudyRepository:
             if course is None:
                 raise ValueError("Course workspace not found.")
             course.pinned = pinned
+            check_cancelled()
             session.commit()
 
     def material_file(self, source_id: str) -> Path | None:
@@ -393,6 +425,7 @@ class StudyRepository:
                 title=f"{course.name} study guide",
                 content_json=payload,
             ))
+            check_cancelled()
             session.commit()
         return artifact_id
 
@@ -429,6 +462,7 @@ class StudyRepository:
             course = session.get(CourseRecord, course_id)
             if course:
                 course.updated_at = utc_now()
+            check_cancelled()
             session.commit()
         return conversation_id
 
@@ -455,6 +489,7 @@ class StudyRepository:
                     signal="grounded_conversation", mastery_before=before,
                     mastery_after=mastery.mastery, correct=None,
                 ))
+            check_cancelled()
             session.commit()
 
     def list_conversations(self, course_id: str | None = None) -> list[dict[str, object]]:
@@ -480,8 +515,11 @@ class StudyRepository:
             conversation = session.get(ConversationRecord, conversation_id)
             if conversation is None:
                 raise ValueError("Conversation not found.")
-            conversation.title = title.strip()
-            conversation.updated_at = utc_now()
+            # Preserve last-message activity; renaming should not reorder chats.
+            session.execute(update(ConversationRecord).where(
+                ConversationRecord.id == conversation_id,
+            ).values(title=title.strip(), updated_at=conversation.updated_at))
+            check_cancelled()
             session.commit()
 
     def set_conversation_pinned(self, conversation_id: str, pinned: bool) -> None:
@@ -490,6 +528,7 @@ class StudyRepository:
             if conversation is None:
                 raise ValueError("Conversation not found.")
             conversation.pinned = pinned
+            check_cancelled()
             session.commit()
 
     def delete_conversation(self, conversation_id: str) -> None:
@@ -499,6 +538,7 @@ class StudyRepository:
                 raise ValueError("Conversation not found.")
             session.execute(delete(MessageRecord).where(MessageRecord.conversation_id == conversation_id))
             session.delete(conversation)
+            check_cancelled()
             session.commit()
 
     def get_conversation(self, conversation_id: str) -> dict[str, object] | None:
@@ -592,6 +632,7 @@ class StudyRepository:
             course = session.get(CourseRecord, course_id)
             if course:
                 course.updated_at = utc_now()
+            check_cancelled()
             session.commit()
         return assessment_id
 
@@ -696,6 +737,7 @@ class StudyRepository:
                 title=f"{assessment.title} report",
                 content_json=json.dumps(report),
             ))
+            check_cancelled()
             session.commit()
         return artifact_id
 
@@ -744,6 +786,7 @@ class StudyRepository:
                 kind=kind, scheduled_for=scheduled_for, reminder_at=reminder_at,
             )
             session.add(row)
+            check_cancelled()
             session.commit()
             session.refresh(row)
             return self._study_event_view(row, course.name)
@@ -771,6 +814,7 @@ class StudyRepository:
                     setattr(row, key, value)
             row.updated_at = utc_now()
             course_name = session.scalar(select(CourseRecord.name).where(CourseRecord.id == row.course_id))
+            check_cancelled()
             session.commit()
             session.refresh(row)
             return self._study_event_view(row, course_name)
@@ -781,6 +825,7 @@ class StudyRepository:
             if row is None:
                 raise ValueError("Study event not found.")
             session.delete(row)
+            check_cancelled()
             session.commit()
 
     def due_reminders(self, now: datetime | None = None) -> list[dict[str, object]]:
