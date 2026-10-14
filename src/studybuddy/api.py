@@ -32,6 +32,7 @@ from studybuddy.assessment import (
     AssessmentQuestion,
     generate_assessment,
     grade_objective,
+    enrich_objective_misconceptions,
     grade_short_answer,
     humanize_math_text,
 )
@@ -1080,6 +1081,10 @@ def submit_assessment(assessment_id: str, request: AssessmentSubmitRequest) -> d
             feedback.append(result)
     except (RuntimeError, ValueError) as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
+    feedback = enrich_objective_misconceptions(
+        record["questions"], feedback, chunks_by_id, analyse_json=call_ollama_json,
+        language=str(record["config"].get("language", "english")),
+    )
     question_lookup: dict[str, AssessmentQuestion] = {item.question_id: item for item in record["questions"]}
     topic_scores: dict[str, list[float]] = {}
     for item in feedback:

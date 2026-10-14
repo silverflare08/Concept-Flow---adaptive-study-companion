@@ -28,6 +28,8 @@ Questions are drafted and checked against cited evidence. Stored fingerprints he
 
 Progress charts distinguish fixed test scores from changing mastery estimates. Calendar plans and reminders are stored separately from recorded learning activity.
 
+Incorrect objective answers receive optional batched misconception analysis comparing the selected answer with source evidence. Accepted hypotheses require a verbatim excerpt from an allowed source and include revision guidance; this checks provenance, not diagnostic correctness. Objective scores remain unchanged. Blank answers, inconclusive analysis and model failures do not create a misconception label or block report saving. Short-answer grading also requests likely misconceptions. These remain hypotheses requiring evaluation, not certain diagnoses.
+
 ## Background work
 
 Map and full-lesson jobs expose progress through polling. Cancellation is checked between model calls and before persistence. An inference call already running can finish before a cancellation checkpoint.
