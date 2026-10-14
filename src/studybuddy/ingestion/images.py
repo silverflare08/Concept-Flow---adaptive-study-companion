@@ -19,15 +19,15 @@ def describe_study_image(path: str | Path) -> str:
     endpoint = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
     model = os.getenv("OLLAMA_VISION_MODEL", "qwen3-vl:2b")
     prompt = (
-        "This image is study material. Transcribe every readable printed or handwritten word exactly. "
-        "Then describe diagrams, equations, charts, labels, arrows and their relationships in enough detail "
-        "for a student who cannot see the image. Do not add facts that are not visible. If something is "
-        "unclear, mark it [unclear]. Return plain text with headings TRANSCRIPTION and VISUAL EXPLANATION."
+        "/no_think\nTranscribe all readable printed or handwritten text. Then describe visible "
+        "diagrams, equations, charts, labels and arrows. Do not add facts."
     )
     payload = json.dumps({
         "model": model, "stream": False,
         "messages": [{"role": "user", "content": prompt, "images": [encoded]}],
-        "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 1200},
+        # qwen3-vl can otherwise spend the response budget on hidden reasoning and
+        # return an empty learner-facing transcription.
+        "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 2400},
     }).encode("utf-8")
     request = Request(endpoint, data=payload, headers={"Content-Type": "application/json"}, method="POST")
     try:

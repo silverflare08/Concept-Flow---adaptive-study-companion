@@ -29,6 +29,7 @@ class CourseRecord(Base):
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
+    pinned: Mapped[bool] = mapped_column(Boolean, default=False)
     course_map_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
@@ -78,6 +79,7 @@ class ConversationRecord(Base):
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     course_id: Mapped[str] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(120))
+    pinned: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
@@ -166,6 +168,23 @@ class MasteryEventRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class StudyEventRecord(Base):
+    """A learner-created calendar plan with an optional persistent reminder."""
+
+    __tablename__ = "study_events"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(160))
+    notes: Mapped[str] = mapped_column(Text, default="")
+    kind: Mapped[str] = mapped_column(String(30), default="study")
+    scheduled_for: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    reminder_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
 class StudyRepository:
     """Small repository boundary so API code never contains raw SQL."""
 
@@ -181,6 +200,11 @@ class StudyRepository:
         if "conversation_updates" not in columns:
             with self.engine.begin() as connection:
                 connection.execute(text("ALTER TABLE topic_mastery ADD COLUMN conversation_updates INTEGER NOT NULL DEFAULT 0"))
+        for table_name in ("courses", "conversations"):
+            table_columns = {column["name"] for column in inspect(self.engine).get_columns(table_name)}
+            if "pinned" not in table_columns:
+                with self.engine.begin() as connection:
+                    connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN pinned BOOLEAN NOT NULL DEFAULT 0"))
 
     def create_course(self, name: str) -> str:
         course_id = uuid4().hex
@@ -202,7 +226,7 @@ class StudyRepository:
         with Session(self.engine) as session:
             query = select(CourseRecord, ArchivedCourseRecord.course_id).outerjoin(
                 ArchivedCourseRecord, ArchivedCourseRecord.course_id == CourseRecord.id,
-            ).order_by(CourseRecord.updated_at.desc())
+            ).order_by(CourseRecord.pinned.desc(), CourseRecord.updated_at.desc())
             if not include_archived:
                 query = query.where(ArchivedCourseRecord.course_id.is_(None))
             rows = session.execute(query).all()
@@ -219,6 +243,7 @@ class StudyRepository:
                 results.append({
                     "id": course.id,
                     "name": course.name,
+                    "pinned": course.pinned,
                     "source_count": len(active_source_ids),
                     "chunk_count": chunk_count or 0,
                     "updated_at": course.updated_at.isoformat(),
@@ -330,6 +355,23 @@ class StudyRepository:
                 session.add(ArchivedCourseRecord(course_id=course_id))
             session.commit()
 
+    def rename_course(self, course_id: str, name: str) -> None:
+        with Session(self.engine) as session:
+            course = session.get(CourseRecord, course_id)
+            if course is None:
+                raise ValueError("Course workspace not found.")
+            course.name = name.strip()
+            course.updated_at = utc_now()
+            session.commit()
+
+    def set_course_pinned(self, course_id: str, pinned: bool) -> None:
+        with Session(self.engine) as session:
+            course = session.get(CourseRecord, course_id)
+            if course is None:
+                raise ValueError("Course workspace not found.")
+            course.pinned = pinned
+            session.commit()
+
     def material_file(self, source_id: str) -> Path | None:
         with Session(self.engine) as session:
             material = session.get(MaterialRecord, source_id)
@@ -420,17 +462,44 @@ class StudyRepository:
             query = select(ConversationRecord, CourseRecord.name).join(CourseRecord)
             if course_id:
                 query = query.where(ConversationRecord.course_id == course_id)
-            rows = session.execute(query.order_by(ConversationRecord.updated_at.desc())).all()
+            rows = session.execute(query.order_by(ConversationRecord.pinned.desc(), ConversationRecord.updated_at.desc())).all()
             return [
                 {
                     "id": conversation.id,
                     "course_id": conversation.course_id,
                     "course_name": course_name,
                     "title": conversation.title,
+                    "pinned": conversation.pinned,
                     "updated_at": conversation.updated_at.isoformat(),
                 }
                 for conversation, course_name in rows
             ]
+
+    def rename_conversation(self, conversation_id: str, title: str) -> None:
+        with Session(self.engine) as session:
+            conversation = session.get(ConversationRecord, conversation_id)
+            if conversation is None:
+                raise ValueError("Conversation not found.")
+            conversation.title = title.strip()
+            conversation.updated_at = utc_now()
+            session.commit()
+
+    def set_conversation_pinned(self, conversation_id: str, pinned: bool) -> None:
+        with Session(self.engine) as session:
+            conversation = session.get(ConversationRecord, conversation_id)
+            if conversation is None:
+                raise ValueError("Conversation not found.")
+            conversation.pinned = pinned
+            session.commit()
+
+    def delete_conversation(self, conversation_id: str) -> None:
+        with Session(self.engine) as session:
+            conversation = session.get(ConversationRecord, conversation_id)
+            if conversation is None:
+                raise ValueError("Conversation not found.")
+            session.execute(delete(MessageRecord).where(MessageRecord.conversation_id == conversation_id))
+            session.delete(conversation)
+            session.commit()
 
     def get_conversation(self, conversation_id: str) -> dict[str, object] | None:
         with Session(self.engine) as session:
@@ -643,6 +712,92 @@ class StudyRepository:
                 for row in rows
             ]
 
+    @staticmethod
+    def _study_event_view(row: StudyEventRecord, course_name: str | None = None) -> dict[str, object]:
+        view: dict[str, object] = {
+            "id": row.id,
+            "course_id": row.course_id,
+            "title": row.title,
+            "notes": row.notes,
+            "kind": row.kind,
+            "scheduled_for": row.scheduled_for.isoformat(),
+            "reminder_at": row.reminder_at.isoformat() if row.reminder_at else None,
+            "completed": row.completed,
+            "created_at": row.created_at.isoformat(),
+            "updated_at": row.updated_at.isoformat(),
+        }
+        if course_name is not None:
+            view["course_name"] = course_name
+        return view
+
+    def create_study_event(
+        self, course_id: str, *, title: str, scheduled_for: datetime,
+        notes: str = "", kind: str = "study", reminder_at: datetime | None = None,
+    ) -> dict[str, object]:
+        event_id = uuid4().hex
+        with Session(self.engine) as session:
+            course = session.get(CourseRecord, course_id)
+            if course is None:
+                raise ValueError("Course not found.")
+            row = StudyEventRecord(
+                id=event_id, course_id=course_id, title=title.strip(), notes=notes.strip(),
+                kind=kind, scheduled_for=scheduled_for, reminder_at=reminder_at,
+            )
+            session.add(row)
+            session.commit()
+            session.refresh(row)
+            return self._study_event_view(row, course.name)
+
+    def list_study_events(self, course_id: str | None = None) -> list[dict[str, object]]:
+        with Session(self.engine) as session:
+            query = select(StudyEventRecord, CourseRecord.name).join(
+                CourseRecord, StudyEventRecord.course_id == CourseRecord.id,
+            )
+            if course_id is not None:
+                query = query.where(StudyEventRecord.course_id == course_id)
+            rows = session.execute(query.order_by(StudyEventRecord.scheduled_for, StudyEventRecord.id)).all()
+            return [self._study_event_view(row, course_name) for row, course_name in rows]
+
+    def update_study_event(self, event_id: str, **changes: object) -> dict[str, object]:
+        allowed = {"title", "notes", "kind", "scheduled_for", "reminder_at", "completed"}
+        with Session(self.engine) as session:
+            row = session.get(StudyEventRecord, event_id)
+            if row is None:
+                raise ValueError("Study event not found.")
+            for key, value in changes.items():
+                if key in allowed:
+                    if key in {"title", "notes"} and isinstance(value, str):
+                        value = value.strip()
+                    setattr(row, key, value)
+            row.updated_at = utc_now()
+            course_name = session.scalar(select(CourseRecord.name).where(CourseRecord.id == row.course_id))
+            session.commit()
+            session.refresh(row)
+            return self._study_event_view(row, course_name)
+
+    def delete_study_event(self, event_id: str) -> None:
+        with Session(self.engine) as session:
+            row = session.get(StudyEventRecord, event_id)
+            if row is None:
+                raise ValueError("Study event not found.")
+            session.delete(row)
+            session.commit()
+
+    def due_reminders(self, now: datetime | None = None) -> list[dict[str, object]]:
+        moment = now or utc_now()
+        with Session(self.engine) as session:
+            rows = session.execute(
+                select(StudyEventRecord, CourseRecord.name)
+                .join(CourseRecord, StudyEventRecord.course_id == CourseRecord.id)
+                .where(
+                    StudyEventRecord.completed.is_(False),
+                    StudyEventRecord.reminder_at.is_not(None),
+                    StudyEventRecord.reminder_at <= moment,
+                )
+                .order_by(StudyEventRecord.reminder_at, StudyEventRecord.id)
+            ).all()
+            return [self._study_event_view(row, course_name) for row, course_name in rows]
+
     def progress_summary(self, course_id: str) -> dict[str, object]:
         assessments = self.list_assessments(course_id)
         completed = [item for item in assessments if item["status"] == "completed"]
@@ -656,39 +811,130 @@ class StudyRepository:
             for item in reversed(completed) if item["score"] is not None
         ]
         daily: dict[str, dict[str, object]] = {}
+        assessment_insights: list[dict[str, object]] = []
+        topic_totals: dict[str, dict[str, float | int]] = {}
+        correct_questions = 0
+        total_questions = 0
 
-        def mark(moment: datetime, kind: str) -> None:
+        def mark(moment: datetime, kind: str, activity: dict[str, object] | None = None) -> None:
             day = moment.date().isoformat()
-            entry = daily.setdefault(day, {"date": day, "assessments": 0, "chats": 0, "materials": 0, "total": 0})
+            entry = daily.setdefault(day, {
+                "date": day, "assessments": 0, "chats": 0, "materials": 0,
+                "total": 0, "activities": [], "assessment_scores": [], "mastery_gain": 0.0,
+            })
             entry[kind] = int(entry[kind]) + 1
             entry["total"] = int(entry["total"]) + 1
+            if activity:
+                entry["activities"].append(activity)
 
         with Session(self.engine) as session:
             finished = session.scalars(
-                select(AssessmentRecord.completed_at)
+                select(AssessmentRecord)
                 .where(AssessmentRecord.course_id == course_id, AssessmentRecord.completed_at.is_not(None))
             ).all()
-            chat_events = session.scalars(
-                select(MessageRecord.created_at)
+            chat_events = session.execute(
+                select(MessageRecord, ConversationRecord.title)
                 .join(ConversationRecord, MessageRecord.conversation_id == ConversationRecord.id)
                 .where(ConversationRecord.course_id == course_id, MessageRecord.role == "user")
             ).all()
             material_events = session.scalars(
-                select(MaterialRecord.created_at).where(MaterialRecord.course_id == course_id)
+                select(MaterialRecord).where(MaterialRecord.course_id == course_id)
             ).all()
             mastery_events = session.scalars(
                 select(MasteryEventRecord)
                 .where(MasteryEventRecord.course_id == course_id)
                 .order_by(MasteryEventRecord.created_at, MasteryEventRecord.id)
             ).all()
-        for moment in finished:
-            if moment: mark(moment, "assessments")
-        for moment in chat_events:
-            mark(moment, "chats")
-        for moment in material_events:
-            mark(moment, "materials")
+            report_rows = session.scalars(
+                select(AssessmentRecord)
+                .where(
+                    AssessmentRecord.course_id == course_id,
+                    AssessmentRecord.status == "completed",
+                    AssessmentRecord.report_json.is_not(None),
+                )
+                .order_by(AssessmentRecord.completed_at, AssessmentRecord.created_at)
+            ).all()
+        for row in report_rows:
+            report = json.loads(row.report_json or "{}")
+            report_correct = int(report.get("correct_questions", 0))
+            report_total = int(report.get("total_questions", 0))
+            correct_questions += report_correct
+            total_questions += report_total
+            summaries = report.get("topic_summary", [])
+            for item in summaries:
+                topic = str(item.get("topic", "Untitled topic"))
+                questions = int(item.get("questions", 0))
+                correct = float(item.get("accuracy", 0)) / 100 * questions
+                aggregate = topic_totals.setdefault(topic, {"correct": 0.0, "questions": 0})
+                aggregate["correct"] = float(aggregate["correct"]) + correct
+                aggregate["questions"] = int(aggregate["questions"]) + questions
+            assessment_insights.append({
+                "id": row.id,
+                "title": row.title,
+                "score": float(row.score or report.get("percentage", 0)),
+                "correct_questions": report_correct,
+                "total_questions": report_total,
+                "weak_topics": list(report.get("weak_topics", [])),
+                "misconceptions": list(report.get("misconceptions", [])),
+                "topic_summary": summaries,
+                "date": (row.completed_at or row.created_at).isoformat(),
+            })
+        for row in finished:
+            moment = row.completed_at or row.created_at
+            mark(moment, "assessments", {
+                "type": "assessment", "id": row.id, "title": row.title,
+                "time": moment.isoformat(), "score": row.score,
+            })
+            entry = daily[moment.date().isoformat()]
+            if row.score is not None:
+                entry["assessment_scores"].append(float(row.score))
+        for message, conversation_title in chat_events:
+            mark(message.created_at, "chats", {
+                "type": "chat", "id": message.conversation_id,
+                "title": conversation_title, "time": message.created_at.isoformat(),
+                "preview": message.content[:120],
+            })
+        for row in material_events:
+            mark(row.created_at, "materials", {
+                "type": "material", "id": row.id, "title": row.name,
+                "time": row.created_at.isoformat(),
+            })
+        for event in mastery_events:
+            day = event.created_at.date().isoformat()
+            entry = daily.setdefault(day, {
+                "date": day, "assessments": 0, "chats": 0, "materials": 0,
+                "total": 0, "activities": [], "assessment_scores": [], "mastery_gain": 0.0,
+            })
+            entry["mastery_gain"] = round(
+                float(entry["mastery_gain"]) + (event.mastery_after - event.mastery_before) * 100, 2,
+            )
 
-        weak = [item for item in masteries if float(item["mastery"]) < 0.7]
+        for entry in daily.values():
+            scores_for_day = list(entry.pop("assessment_scores"))
+            entry["assessment_score"] = (
+                round(sum(scores_for_day) / len(scores_for_day), 1) if scores_for_day else None
+            )
+            entry["activities"].sort(key=lambda item: str(item["time"]))
+
+        topic_performance = [
+            {
+                "topic": topic,
+                "correct": round(float(values["correct"]), 1),
+                "questions": int(values["questions"]),
+                "accuracy": round(float(values["correct"]) / int(values["questions"]) * 100, 1)
+                if int(values["questions"]) else 0.0,
+            }
+            for topic, values in topic_totals.items()
+        ]
+        topic_performance.sort(key=lambda item: (float(item["accuracy"]), str(item["topic"])))
+        mastery_by_topic = {str(item["topic"]): item for item in masteries}
+        weak_topics = {
+            str(item["topic"]) for item in masteries if float(item["mastery"]) < 0.7
+        }
+        for insight in assessment_insights:
+            weak_topics.update(str(topic) for topic in insight["weak_topics"])
+        weak = [mastery_by_topic[topic] for topic in weak_topics if topic in mastery_by_topic]
+        weak.sort(key=lambda item: float(item["mastery"]))
         revision_plan = [
             {
                 "topic": item["topic"], "mastery": item["mastery"],
@@ -717,13 +963,18 @@ class StudyRepository:
             "completed_assessments": len(completed),
             "average_score": round(sum(scores) / len(scores), 1) if scores else None,
             "answered_questions": sum(int(item["attempts"]) for item in masteries),
+            "correct_questions": correct_questions,
+            "total_questions": total_questions,
             "tutoring_interactions": sum(int(item["conversation_updates"]) for item in masteries),
             "mastery": masteries,
             "mastery_history": mastery_history,
             "mastery_gain": mastery_gain,
             "recent_assessments": completed[:8],
             "score_history": score_history,
+            "topic_performance": topic_performance,
+            "assessment_insights": list(reversed(assessment_insights)),
             "daily_activity": sorted(daily.values(), key=lambda item: str(item["date"])),
+            "study_events": self.list_study_events(course_id),
             "weak_topics": [item["topic"] for item in weak],
             "revision_plan": revision_plan,
             "score_change": round(score_history[-1]["score"] - score_history[0]["score"], 1) if len(score_history) > 1 else None,

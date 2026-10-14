@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, Clock3, FileText, FolderPlus, GitBranch, Headphones, Home, Layers3, Leaf, Menu, MessageSquareText, Search, Sparkles, Target, Trash2, Upload, X } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, CircleHelp, Clock3, FileText, FolderPlus, GitBranch, Headphones, Home, Layers3, Leaf, Menu, MessageSquareText, PanelLeftClose, PanelLeftOpen, Search, Sparkles, Target, Upload, X } from "lucide-react";
 import "./index.css";
 import StudyViews from "./StudyViews.jsx";
 import MaterialsPage from "./MaterialsPage.jsx";
@@ -12,15 +12,30 @@ import ProgressPage from "./ProgressPage.jsx";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 import FlashcardsPage from "./FlashcardsPage.jsx";
 import StudyMediaPage from "./StudyMediaPage.jsx";
+import LibraryItemMenu from "./LibraryItemMenu.jsx";
+import RenameDialog from "./RenameDialog.jsx";
+import ReminderCentre from "./ReminderCentre.jsx";
 
 // In development, Vite forwards /api to FastAPI. This avoids browser-specific
 // localhost restrictions; deployment can override it with VITE_API_URL.
 const API = import.meta.env.VITE_API_URL || "";
 const navItems = [["Home", Home], ["Learn", BookOpen], ["Learning Flow", BookOpen], ["Revision Mind Map", GitBranch], ["Flashcards", Layers3], ["Practise", Target], ["Audio & Video", Headphones], ["Progress", BarChart3], ["Materials", Layers3], ["History", Clock3]];
 
+class AppErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return <main className="grid min-h-screen place-items-center bg-[#f8f7fc] p-6"><section className="glass-card max-w-lg p-8 text-center"><BrainCircuit className="mx-auto text-plum" size={34}/><p className="eyebrow mt-4">ConceptFlow recovery</p><h1 className="mt-2 text-2xl font-extrabold">This page needs a quick refresh</h1><p className="mt-3 text-sm leading-6 text-slate-600">Your courses and saved work are safe. Reload the interface to continue.</p><button onClick={() => window.location.reload()} className="primary-button mt-5">Reload ConceptFlow <ArrowRight size={16}/></button><details className="mt-5 text-left text-xs text-slate-400"><summary>Technical detail</summary><p className="mt-2 break-words">{this.state.error.message}</p></details></section></main>;
+  }
+}
+
 function App() {
   const [page, setPage] = useState("Home");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => window.localStorage.getItem("conceptflow-sidebar-collapsed") === "true",
+  );
   const [workspace, setWorkspace] = useState({ name: "My study space", source_count: 0, chunk_count: 0, sources: [] });
   const [courseMap, setCourseMap] = useState(null);
   const [guideProgress, setGuideProgress] = useState(null);
@@ -32,8 +47,21 @@ function App() {
   const [conversationId, setConversationId] = useState(null);
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [pendingWorkspaceDelete, setPendingWorkspaceDelete] = useState(null);
+  const [pendingChatDelete, setPendingChatDelete] = useState(null);
+  const [renameTarget, setRenameTarget] = useState(null);
+  const [libraryBusy, setLibraryBusy] = useState(false);
   const [deletingWorkspace, setDeletingWorkspace] = useState(false);
   const [mediaRequest, setMediaRequest] = useState({ sourceId: "", mode: "audio" });
+  const [dueReminders, setDueReminders] = useState([]);
+  const [hiddenReminders, setHiddenReminders] = useState([]);
+  const notifiedReminderIds = useRef(new Set());
+
+  async function refreshReminders() {
+    try {
+      const response = await fetch(`${API}/api/reminders/due`);
+      if (response.ok) setDueReminders((await response.json()).reminders || []);
+    } catch { /* The regular API connection notice already explains backend availability. */ }
+  }
 
   async function refreshLibrary() {
     const [coursesResponse, historyResponse] = await Promise.all([fetch(`${API}/api/courses`), fetch(`${API}/api/history`)]);
@@ -47,7 +75,24 @@ function App() {
     try { const response = await fetch(`${API}/api/workspace`); if (response.ok) { const data = await response.json(); setWorkspace(data); const mapResponse = await fetch(`${API}/api/course-map`); if (mapResponse.ok) setCourseMap((await mapResponse.json()).course_map); await refreshLibrary(); setNotice(""); } }
     catch { setNotice("The frontend is running, but the Python API is not connected yet. Start it with uvicorn."); }
   }
-  useEffect(() => { refreshWorkspace(); }, []);
+  useEffect(() => { refreshWorkspace(); refreshReminders(); }, []);
+  useEffect(() => {
+    const revisit = () => { if (document.visibilityState === "visible") refreshReminders(); };
+    const timer = window.setInterval(refreshReminders, 60_000);
+    document.addEventListener("visibilitychange", revisit);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", revisit); };
+  }, []);
+  useEffect(() => {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    dueReminders.forEach(reminder => {
+      if (notifiedReminderIds.current.has(reminder.id)) return;
+      notifiedReminderIds.current.add(reminder.id);
+      new Notification(`Study reminder: ${reminder.title}`, { body: `${reminder.course_name} · ${new Date(reminder.scheduled_for).toLocaleString()}` });
+    });
+  }, [dueReminders]);
+  useEffect(() => {
+    window.localStorage.setItem("conceptflow-sidebar-collapsed", String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   async function createWorkspace(name) {
     const response = await fetch(`${API}/api/workspace`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
@@ -58,12 +103,17 @@ function App() {
     const form = new FormData(); Array.from(files).forEach(file => form.append("files", file));
     const response = await fetch(`${API}/api/materials`, { method: "POST", body: form });
     const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Upload failed.");
-    setWorkspace(data.workspace); setCourseMap(null); await refreshLibrary(); setNotice(data.reports.map(report => report.message || `${report.name}: ${report.status} (${report.chunks || 0} chunks)`).join(" · "));
+    setWorkspace(data.workspace); setCourseMap(null); await refreshLibrary();
+    const failed = data.reports.filter(report => report.status !== "indexed");
+    const ready = data.reports.filter(report => report.status === "indexed");
+    const summary = data.reports.map(report => report.message || `${report.name}: ready (${report.chunks || 0} searchable sections)`).join(" · ");
+    setNotice(summary);
+    if (failed.length && !ready.length) throw new Error(failed.map(report => `${report.name}: ${report.message || "could not be read"}`).join(" · "));
   }
   async function uploadUrl(url) {
     const response = await fetch(`${API}/api/materials/url`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
     const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Link import failed.");
-    setWorkspace(data.workspace); setCourseMap(null); await refreshLibrary(); setNotice(`${data.report.name}: indexed (${data.report.chunks} chunks)`); return data;
+    setWorkspace(data.workspace); setCourseMap(null); await refreshLibrary(); setNotice(`${data.report.name}: ready (${data.report.chunks} searchable sections)`); return data;
   }
   async function deleteMaterial(sourceId) {
     const response = await fetch(`${API}/api/materials/${sourceId}`, { method: "DELETE" });
@@ -84,6 +134,35 @@ function App() {
       setNotice(`Archived workspace “${course.name}”. Its chats, maps, assessments and sources were preserved.`);
     } catch (error) { setNotice(error.message); }
     finally { setDeletingWorkspace(false); setPendingWorkspaceDelete(null); }
+  }
+  async function updateLibraryItem(kind, item, changes) {
+    setLibraryBusy(true);
+    try {
+      const endpoint = kind === "course" ? `/api/courses/${item.id}` : `/api/conversations/${item.id}`;
+      const response = await fetch(`${API}${endpoint}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(changes) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || `Could not update this ${kind}.`);
+      if (kind === "course" && data.workspace) setWorkspace(data.workspace);
+      await refreshLibrary();
+      setNotice(`${kind === "course" ? "Course" : "Chat"} updated.`);
+    } catch (error) { setNotice(error.message); }
+    finally { setLibraryBusy(false); setRenameTarget(null); }
+  }
+  async function deleteChat(chat) {
+    setLibraryBusy(true);
+    try {
+      const response = await fetch(`${API}/api/conversations/${chat.id}`, { method: "DELETE" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || "Could not delete this chat.");
+      if (conversationId === chat.id) newChat();
+      if (selectedConversationId === chat.id) setSelectedConversationId(null);
+      await refreshLibrary(); setNotice(`Deleted chat “${chat.title}”.`);
+    } catch (error) { setNotice(error.message); }
+    finally { setLibraryBusy(false); setPendingChatDelete(null); }
+  }
+  async function completeReminder(reminder) {
+    const response = await fetch(`${API}/api/study-events/${reminder.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ completed: true }) });
+    if (response.ok) { setDueReminders(items => items.filter(item => item.id !== reminder.id)); setNotice(`Completed “${reminder.title}”.`); }
   }
   async function askTutor(language = "english") {
     if (!query.trim()) return; setTutorState({ status: "loading", reply: null, message: "" });
@@ -159,23 +238,26 @@ function App() {
     Flashcards: <FlashcardsPage api={API} workspace={workspace} guide={courseMap} setPage={setPage} generate={generateCourseMap} progress={guideProgress}/>,
     Practise: <AssessmentPage api={API} workspace={workspace} guide={courseMap} refreshLibrary={refreshLibrary} />,
     "Audio & Video": <StudyMediaPage api={API} workspace={workspace} requestedSourceId={mediaRequest.sourceId} requestedMode={mediaRequest.mode} refreshLibrary={refreshLibrary}/>,
-    Progress: <ProgressPage api={API} workspace={workspace} setPage={setPage} selectCourse={selectCourse} />,
+    Progress: <ProgressPage api={API} workspace={workspace} setPage={setPage} selectCourse={selectCourse} refreshReminders={refreshReminders} />,
     Materials: <MaterialsPage api={API} workspace={workspace} courses={library.courses} createWorkspace={createWorkspace} selectCourse={courseId => selectCourse(courseId, "Materials")} uploadMaterials={uploadMaterials} uploadUrl={uploadUrl} deleteMaterial={deleteMaterial} openStudyMedia={openStudyMedia} notice={notice} />,
     History: <HistoryPage api={API} history={{ conversations: library.conversations, artifacts: library.artifacts, assessments: library.assessments || [], archivedCourses: library.archivedCourses || [] }} courses={library.courses} activeCourseId={workspace.id} selectCourse={selectCourse} selectedConversationId={selectedConversationId} onSelectConversation={setSelectedConversationId} />
   };
   return <div className="min-h-screen bg-[radial-gradient(circle_at_88%_7%,#efeaff_0,transparent_25%),radial-gradient(circle_at_8%_88%,#e4f5ee_0,transparent_26%),#f8f7fc]">
-    <aside className={`fixed inset-y-0 z-30 flex w-72 flex-col overflow-hidden border-r border-white/70 bg-[#f3f0fa]/90 p-5 backdrop-blur-xl transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-      <div className="mb-5 flex shrink-0 items-center justify-between"><Brand/><button onClick={() => setSidebarOpen(false)} className="lg:hidden"><X size={20}/></button></div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"><p className="eyebrow mb-3 px-3">Workspace</p><nav className="space-y-1">{navItems.map(([label, Icon]) => <button key={label} onClick={() => { setPage(label); setSidebarOpen(false); }} className={`nav-item ${page === label ? "nav-item-active" : ""}`}><Icon size={18}/>{label}</button>)}</nav><SidebarLibrary courses={library.courses} conversations={library.conversations} workspace={workspace} selectCourse={selectCourse} openHistoryConversation={openHistoryConversation} archiveCourse={setPendingWorkspaceDelete}/></div>
+    <ReminderCentre reminders={dueReminders.filter(item => !hiddenReminders.includes(item.id))} onComplete={completeReminder} onDismiss={id => setHiddenReminders(items => [...items, id])} onOpenPlanner={() => setPage("Progress")}/>
+    <aside className={`fixed inset-y-0 z-30 flex w-72 flex-col overflow-hidden border-r border-white/70 bg-[#f3f0fa]/90 p-5 backdrop-blur-xl transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} ${sidebarCollapsed ? "lg:-translate-x-full" : "lg:translate-x-0"}`}>
+      <div className="mb-5 flex shrink-0 items-center justify-between"><Brand/><div className="flex items-center gap-1"><button onClick={() => setSidebarCollapsed(true)} title="Collapse sidebar" aria-label="Collapse sidebar" className="hidden rounded-xl p-2 text-slate-500 transition hover:bg-white hover:text-plum lg:grid"><PanelLeftClose size={19}/></button><button onClick={() => setSidebarOpen(false)} aria-label="Close sidebar" className="rounded-xl p-2 text-slate-500 hover:bg-white lg:hidden"><X size={20}/></button></div></div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"><p className="eyebrow mb-3 px-3">Workspace</p><nav className="space-y-1">{navItems.map(([label, Icon]) => <button key={label} onClick={() => { setPage(label); setSidebarOpen(false); }} className={`nav-item ${page === label ? "nav-item-active" : ""}`}><Icon size={18}/>{label}</button>)}</nav><SidebarLibrary courses={library.courses} conversations={library.conversations} workspace={workspace} selectCourse={selectCourse} openHistoryConversation={openHistoryConversation} archiveCourse={setPendingWorkspaceDelete} deleteChat={setPendingChatDelete} renameItem={(kind, item) => setRenameTarget({ kind, ...item })} pinItem={(kind, item) => updateLibraryItem(kind, item, { pinned: !item.pinned })}/></div>
     </aside>
-    <main className="min-h-screen lg:pl-72"><header className="flex items-center justify-between px-5 py-5 sm:px-9"><button onClick={() => setSidebarOpen(true)} className="rounded-xl bg-white p-2 text-slate-600 shadow-sm lg:hidden"><Menu size={20}/></button><div className="hidden lg:block"/><div className="flex items-center gap-3"><div className="hidden text-right sm:block"><p className="text-sm font-semibold">{workspace.name}</p><p className="text-xs text-slate-500">{workspace.source_count} source{workspace.source_count === 1 ? "" : "s"} indexed</p></div><div className="grid h-10 w-10 place-items-center rounded-full bg-lilac font-bold text-plum">P</div></div></header><section className="mx-auto max-w-7xl px-5 pb-12 sm:px-9">{content[page]}</section></main>
+    <main className={`min-h-screen transition-[padding] duration-300 ${sidebarCollapsed ? "lg:pl-0" : "lg:pl-72"}`}><header className="flex items-center justify-between px-5 py-5 sm:px-9"><div className="flex items-center gap-2"><button onClick={() => setSidebarOpen(true)} aria-label="Open sidebar" className="rounded-xl bg-white p-2 text-slate-600 shadow-sm lg:hidden"><Menu size={20}/></button>{sidebarCollapsed && <button onClick={() => setSidebarCollapsed(false)} title="Open sidebar" aria-label="Open sidebar" className="hidden rounded-xl bg-white p-2 text-slate-600 shadow-sm transition hover:text-plum lg:grid"><PanelLeftOpen size={20}/></button>}</div><div className="flex items-center gap-3"><div className="hidden text-right sm:block"><p className="text-sm font-semibold">{workspace.name}</p><p className="text-xs text-slate-500">{workspace.source_count} study material{workspace.source_count === 1 ? "" : "s"} ready</p></div><div className="grid h-10 w-10 place-items-center rounded-full bg-lilac font-bold text-plum">P</div></div></header><section className="mx-auto max-w-7xl px-5 pb-12 sm:px-9">{content[page]}</section></main>
     <ConfirmDialog open={!!pendingWorkspaceDelete} title="Remove this workspace from active study?" body={pendingWorkspaceDelete ? `“${pendingWorkspaceDelete.name}” will be archived from Recent Courses. Its uploaded sources, chats, generated maps, assessments and progress will stay safely stored in History.` : ""} confirmLabel="Archive workspace" busy={deletingWorkspace} onCancel={() => setPendingWorkspaceDelete(null)} onConfirm={() => deleteWorkspace(pendingWorkspaceDelete)}/>
+    <ConfirmDialog open={!!pendingChatDelete} title="Delete this chat?" body={pendingChatDelete ? `“${pendingChatDelete.title}” and its messages will be permanently removed. Your uploaded materials, maps and assessments will not be affected.` : ""} confirmLabel="Delete chat" busy={libraryBusy} onCancel={() => setPendingChatDelete(null)} onConfirm={() => deleteChat(pendingChatDelete)}/>
+    <RenameDialog target={renameTarget} busy={libraryBusy} onCancel={() => setRenameTarget(null)} onSave={value => updateLibraryItem(renameTarget.kind, renameTarget, { name: value })}/>
   </div>;
 }
 
-function SidebarLibrary({ courses, conversations, workspace, selectCourse, openHistoryConversation, archiveCourse }) {
+function SidebarLibrary({ courses, conversations, workspace, selectCourse, openHistoryConversation, archiveCourse, deleteChat, renameItem, pinItem }) {
   const courseChats = conversations.filter(item => item.course_id === workspace.id);
-  return <div className="mt-5 border-t border-white/70 pt-4"><p className="eyebrow mb-2 px-3">Recent courses</p><div className="space-y-1">{courses.slice(0, 8).map(course => <div key={course.id} className={`group flex items-center rounded-xl ${course.id === workspace.id ? "bg-white shadow-sm" : "hover:bg-white/60"}`}><button onClick={() => selectCourse(course.id)} className={`min-w-0 flex-1 truncate px-3 py-2 text-left text-sm ${course.id === workspace.id ? "font-bold text-plum" : "text-slate-600"}`}>{course.name}</button><button onClick={() => archiveCourse(course)} title={`Archive workspace ${course.name}`} className="mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 opacity-70 transition hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"><Trash2 size={15}/></button></div>)}</div><div className="mb-2 mt-5 flex items-center justify-between px-3"><p className="eyebrow">Recent chats</p><span className="text-[10px] font-semibold text-slate-400">{courseChats.length}</span></div><div className="space-y-1 pb-5">{courseChats.length ? courseChats.map(item => <button key={item.id} onClick={() => openHistoryConversation(item.id)} className="w-full rounded-xl px-3 py-2 text-left text-sm text-slate-600 hover:bg-white/60" title={item.title}><span className="block truncate font-medium">{item.title}</span><span className="mt-0.5 block text-[10px] text-slate-400">{new Date(item.updated_at).toLocaleDateString()}</span></button>) : <p className="px-3 py-2 text-xs leading-5 text-slate-400">Chats for this workspace will appear here.</p>}</div></div>;
+  return <div className="mt-5 border-t border-white/70 pt-4"><p className="eyebrow mb-2 px-3">Recent courses</p><div className="space-y-1">{courses.slice(0, 8).map(course => <div key={course.id} className={`group flex items-center rounded-xl pr-1 ${course.id === workspace.id ? "bg-white shadow-sm" : "hover:bg-white/60"}`}><button onClick={() => selectCourse(course.id)} className={`flex min-w-0 flex-1 items-center gap-2 truncate px-3 py-2 text-left text-sm ${course.id === workspace.id ? "font-bold text-plum" : "text-slate-600"}`}>{course.pinned && <span title="Pinned" className="h-2 w-2 shrink-0 rounded-full bg-plum"/>}<span className="truncate">{course.name}</span></button><LibraryItemMenu item={course} kind="course" onPin={item => pinItem("course", item)} onRename={item => renameItem("course", item)} onDelete={archiveCourse}/></div>)}</div><div className="mb-2 mt-5 flex items-center justify-between px-3"><p className="eyebrow">Recent chats</p><span className="text-[10px] font-semibold text-slate-400">{courseChats.length}</span></div><div className="space-y-1 pb-5">{courseChats.length ? courseChats.map(item => <div key={item.id} className="group flex items-center rounded-xl pr-1 hover:bg-white/60"><button onClick={() => openHistoryConversation(item.id)} className="min-w-0 flex-1 px-3 py-2 text-left text-sm text-slate-600" title={item.title}><span className="flex items-center gap-2"><span className="truncate font-medium">{item.title}</span>{item.pinned && <span title="Pinned" className="h-2 w-2 shrink-0 rounded-full bg-plum"/>}</span><span className="mt-0.5 block text-[10px] text-slate-400">{new Date(item.updated_at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}</span></button><LibraryItemMenu item={item} kind="chat" onPin={chat => pinItem("conversation", chat)} onRename={chat => renameItem("conversation", chat)} onDelete={deleteChat}/></div>) : <p className="px-3 py-2 text-xs leading-5 text-slate-400">Chats for this workspace will appear here.</p>}</div></div>;
 }
 
 function Brand() { return <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-plum text-white shadow-lg shadow-plum/25"><BrainCircuit size={22}/></div><div><p className="text-lg font-extrabold tracking-tight">ConceptFlow</p><p className="text-xs text-slate-500">Study with clarity</p></div></div>; }
@@ -194,4 +276,4 @@ function Progress({ workspace, setPage }) { return <div className="space-y-6"><T
 
 function Materials({ workspace, createWorkspace, uploadMaterials, notice }) { const [name, setName] = useState(workspace.name); const [files, setFiles] = useState([]); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); async function beginCourse() { try { setBusy(true); setError(""); await createWorkspace(name); } catch (e) { setError(e.message); } finally { setBusy(false); } } async function submitFiles() { if (!files.length) return; try { setBusy(true); setError(""); await uploadMaterials(files); setFiles([]); } catch (e) { setError(e.message); } finally { setBusy(false); } } return <div className="space-y-6"><Title eyebrow="Course workspace" title="Build a study space for any subject" body="Create a separate workspace for any course: data science, medicine, history, law, language learning, or anything else you study."/><div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]"><section className="glass-card p-6"><p className="text-sm font-bold">1. Name your course</p><input value={name} onChange={e => setName(e.target.value)} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-plum" placeholder="e.g. Machine Learning - Unit 1"/><button disabled={busy || !name.trim()} onClick={beginCourse} className="primary-button mt-4 disabled:opacity-50">Create new workspace <ArrowRight size={17}/></button><p className="mt-3 text-xs leading-5 text-slate-500">Creating a workspace starts a fresh course, so material from another subject does not get mixed in.</p></section><section className="glass-card p-6"><p className="text-sm font-bold">2. Upload study material</p><label className="mt-3 block cursor-pointer rounded-2xl border-2 border-dashed border-lavender bg-lilac/20 p-8 text-center transition hover:bg-lilac/40"><input className="hidden" type="file" accept=".pdf,.pptx,.mp4,.mov,.mkv" multiple onChange={e => setFiles(Array.from(e.target.files || []))}/><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-white text-plum shadow-sm"><Upload size={22}/></div><p className="mt-3 font-bold">Choose PDFs, slides, or videos</p><p className="mt-1 text-xs text-slate-500">PDF and PPTX indexing work now. Video transcription is next.</p></label>{files.length > 0 && <div className="mt-4 space-y-2">{files.map(file => <div key={`${file.name}-${file.size}`} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm"><span className="truncate font-medium">{file.name}</span><span className="ml-3 text-xs text-slate-500">{Math.ceil(file.size / 1024)} KB</span></div>)}<button disabled={busy} onClick={submitFiles} className="primary-button mt-2">{busy ? "Processing…" : "Upload and index"} <Upload size={17}/></button></div>}</section></div>{error && <div className="rounded-2xl bg-peach p-4 text-sm text-slate-700">{error}</div>}{notice && <div className="rounded-2xl bg-sky/70 p-4 text-sm text-slate-700">{notice}</div>}{workspace.sources.length > 0 && <section className="glass-card p-6"><div className="flex items-center justify-between"><div><p className="eyebrow">Active course</p><h2 className="mt-1 text-xl font-bold">{workspace.name}</h2></div><span className="rounded-full bg-mint px-3 py-1 text-sm font-bold text-emerald-700">{workspace.chunk_count} chunks</span></div><div className="mt-5 space-y-3">{workspace.sources.map((source, index) => <div key={`${source.name}-${index}`} className="flex items-center justify-between rounded-xl bg-slate-50 p-4"><div className="flex items-center gap-3"><FileText className="text-plum" size={19}/><div><p className="font-semibold">{source.name}</p><p className="text-xs text-slate-500">{source.type?.toUpperCase()} · {source.chunks || 0} chunks</p></div></div><span className={`rounded-full px-3 py-1 text-xs font-bold ${source.status === "indexed" ? "bg-mint text-emerald-700" : "bg-peach text-amber-700"}`}>{source.status}</span></div>)}</div></section>}</div>; }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(<AppErrorBoundary><App /></AppErrorBoundary>);

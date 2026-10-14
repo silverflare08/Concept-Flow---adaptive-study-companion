@@ -13,6 +13,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field, model_validator
 
 from studybuddy.ingestion.models import KnowledgeChunk
+from studybuddy.language import matches_requested_language
 from studybuddy.retrieval.bm25 import BM25Index
 
 QuestionType = Literal["mcq", "short_answer", "numerical", "true_false", "fill_blank"]
@@ -190,6 +191,50 @@ def parse_assessment_draft(raw_json: str, *, allowed_chunk_ids: set[str]) -> Ass
     return draft
 
 
+def localize_assessment(
+    draft: AssessmentDraft, language: str, *, generate_json: Callable[[str], str],
+    allowed_chunk_ids: set[str],
+) -> AssessmentDraft:
+    """Translate an already verified assessment without changing its semantics."""
+    if language == "english":
+        return draft
+    instruction = {
+        "hindi": "natural Hindi in Devanagari, keeping necessary technical terms in English",
+        "hinglish": "natural conversational Hinglish using Devanagari Hindi and familiar English technical terms",
+    }[language]
+    prompt = f"""Rewrite this VERIFIED assessment in {instruction}.
+Return JSON only in exactly the same schema. Translate learner-facing title, prompts, topics,
+options, answers, explanations and grading criteria. Preserve question_id, question_type,
+difficulty, numerical_tolerance and evidence_chunk_ids exactly. For MCQ, translate the correct
+option and correct_answer identically so they still match. Keep numeric answers numeric. Keep the
+literal options True and False unchanged for true_false questions. Do not add, remove, combine or
+change the meaning of any question.
+
+ASSESSMENT JSON:
+{draft.model_dump_json()}
+"""
+    localized = parse_assessment_draft(generate_json(prompt), allowed_chunk_ids=allowed_chunk_ids)
+    original_by_id = {item.question_id: item for item in draft.questions}
+    if set(original_by_id) != {item.question_id for item in localized.questions}:
+        raise ValueError("The language rewrite changed assessment question IDs.")
+    for item in localized.questions:
+        original = original_by_id[item.question_id]
+        if (
+            item.question_type != original.question_type
+            or item.difficulty != original.difficulty
+            or item.evidence_chunk_ids != original.evidence_chunk_ids
+            or item.numerical_tolerance != original.numerical_tolerance
+        ):
+            raise ValueError("The language rewrite changed verified assessment structure.")
+    visible_text = " ".join(
+        [localized.title]
+        + [part for item in localized.questions for part in [item.prompt, item.explanation, *item.options]]
+    )
+    if not matches_requested_language(visible_text, language):
+        raise ValueError(f"The local model did not return the assessment in {language.title()}.")
+    return localized
+
+
 def build_verification_prompt(question: AssessmentQuestion, chunks_by_id: dict[str, KnowledgeChunk]) -> str:
     evidence = "\n\n".join(
         f"{chunk.citation.label()}\n{chunk.text[:1800]}"
@@ -294,7 +339,7 @@ def generate_assessment(
     previous_fingerprints = {question_fingerprint(prompt) for prompt in previous_prompts}
     prompt = build_generation_prompt(
         course_name=course_name, evidence=evidence, count=count, difficulty=difficulty,
-        question_types=question_types, scope=scope, previous_prompts=previous_prompts, language=language,
+        question_types=question_types, scope=scope, previous_prompts=previous_prompts, language="english",
     )
     last_problem = ""
     for attempt in range(2):
@@ -337,7 +382,10 @@ def generate_assessment(
             seen_prompts.append(question.prompt)
             accepted.append(question)
         if len(accepted) >= count:
-            return AssessmentDraft(title=draft.title, questions=accepted[:count])
+            verified = AssessmentDraft(title=draft.title, questions=accepted[:count])
+            return localize_assessment(
+                verified, language, generate_json=generate_json, allowed_chunk_ids=allowed,
+            )
         last_problem = "; ".join(problems) or f"Only {len(accepted)} valid questions were returned."
         prompt += f"\nPrevious draft failed validation: {last_problem}. Return a complete corrected set."
     raise ValueError(f"Could not generate {count} verified, non-repeated questions: {last_problem}")

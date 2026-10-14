@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .documents import ingest_docx, ingest_text_document
+from .documents import ingest_csv_document, ingest_docx, ingest_odt_document, ingest_rtf_document, ingest_text_document
 from .images import describe_study_image, ingest_image
 from .models import SourceSegment, SourceType
 from .pdf import ingest_pdf
@@ -15,7 +15,7 @@ from .video import transcribe_video
 
 PDF_TYPES = {".pdf"}
 SLIDE_TYPES = {".pptx"}
-DOCUMENT_TYPES = {".docx", ".txt", ".md"}
+DOCUMENT_TYPES = {".docx", ".txt", ".md", ".csv", ".rtf", ".odt"}
 IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 AUDIO_TYPES = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"}
 VIDEO_TYPES = {".mp4", ".mov", ".mkv", ".avi", ".webm"}
@@ -53,6 +53,18 @@ def parse_study_file(
         ).segments)
     if suffix in {".txt", ".md"}:
         return ParsedMaterial("document", ingest_text_document(
+            file_path, source_id=source_id, source_name=source_name, source_uri=source_uri,
+        ).segments)
+    if suffix == ".csv":
+        return ParsedMaterial("document", ingest_csv_document(
+            file_path, source_id=source_id, source_name=source_name, source_uri=source_uri,
+        ).segments)
+    if suffix == ".rtf":
+        return ParsedMaterial("document", ingest_rtf_document(
+            file_path, source_id=source_id, source_name=source_name, source_uri=source_uri,
+        ).segments)
+    if suffix == ".odt":
+        return ParsedMaterial("document", ingest_odt_document(
             file_path, source_id=source_id, source_name=source_name, source_uri=source_uri,
         ).segments)
     if suffix in IMAGE_TYPES:

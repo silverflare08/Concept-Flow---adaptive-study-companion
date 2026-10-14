@@ -43,3 +43,17 @@ def test_overview_prompt_can_request_hinglish() -> None:
     prompt = build_overview_prompt("Biology", [material_chunk()], 1, 1, language="hinglish")
     assert "conversational Hinglish" in prompt
     assert "raw LaTeX" in prompt
+
+
+def test_overview_retries_when_model_returns_english_for_hindi() -> None:
+    responses = iter([
+        "## Photosynthesis\nPlants convert light energy.",
+        "## प्रकाश संश्लेषण\nपौधे light energy को chemical energy में बदलते हैं।",
+    ])
+
+    result = generate_material_overview(
+        "Biology", [material_chunk()], generate=lambda prompt: next(responses), language="hindi",
+    )
+
+    assert "प्रकाश संश्लेषण" in result["answer"]
+    assert result["generation_mode"] == "local_ai"

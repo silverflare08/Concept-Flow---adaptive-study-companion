@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 import json
 import mimetypes
 from pathlib import Path
@@ -99,6 +100,11 @@ class WorkspaceRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 
 
+class LibraryItemUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    pinned: bool | None = None
+
+
 class SearchRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
     limit: int = Field(default=5, ge=1, le=10)
@@ -133,6 +139,23 @@ class AssessmentCreateRequest(BaseModel):
 
 class AssessmentSubmitRequest(BaseModel):
     answers: dict[str, str]
+
+
+class StudyEventCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    notes: str = Field(default="", max_length=2000)
+    kind: Literal["study", "revision", "assessment", "deadline"] = "study"
+    scheduled_for: datetime
+    reminder_at: datetime | None = None
+
+
+class StudyEventUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    notes: str | None = Field(default=None, max_length=2000)
+    kind: Literal["study", "revision", "assessment", "deadline"] | None = None
+    scheduled_for: datetime | None = None
+    reminder_at: datetime | None = None
+    completed: bool | None = None
 
 
 DownloadFormat = Literal["md", "txt", "pdf", "docx", "json"]
@@ -381,6 +404,21 @@ def activate_course(course_id: str) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="Course workspace not found.")
     workspace = workspace_from_record(record)
     return workspace_summary()
+
+
+@app.patch("/api/courses/{course_id}")
+def update_course(course_id: str, request: LibraryItemUpdateRequest) -> dict[str, object]:
+    global workspace
+    try:
+        if request.name is not None:
+            repository.rename_course(course_id, request.name)
+        if request.pinned is not None:
+            repository.set_course_pinned(course_id, request.pinned)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    if workspace.course_id == course_id and request.name is not None:
+        workspace.name = request.name.strip()
+    return {"workspace": workspace_summary(), "courses": repository.list_courses()}
 
 
 def remove_registered_source_files(files: list[tuple[str, Path]]) -> None:
@@ -852,6 +890,43 @@ def get_all_progress() -> dict[str, object]:
     return {"workspaces": summaries}
 
 
+@app.get("/api/study-events")
+def list_study_events() -> dict[str, object]:
+    return {"events": repository.list_study_events(workspace.course_id)}
+
+
+@app.post("/api/study-events")
+def create_study_event(request: StudyEventCreateRequest) -> dict[str, object]:
+    try:
+        event = repository.create_study_event(workspace.course_id, **request.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return {"event": event}
+
+
+@app.patch("/api/study-events/{event_id}")
+def update_study_event(event_id: str, request: StudyEventUpdateRequest) -> dict[str, object]:
+    try:
+        event = repository.update_study_event(event_id, **request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return {"event": event}
+
+
+@app.delete("/api/study-events/{event_id}")
+def delete_study_event(event_id: str) -> dict[str, object]:
+    try:
+        repository.delete_study_event(event_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return {"deleted_id": event_id}
+
+
+@app.get("/api/reminders/due")
+def due_reminders() -> dict[str, object]:
+    return {"reminders": repository.due_reminders()}
+
+
 @app.get("/api/flashcards/download")
 def download_flashcards(format: DownloadFormat = "pdf") -> Response:
     if workspace.course_map is None:
@@ -1067,6 +1142,27 @@ def get_conversation(conversation_id: str) -> dict[str, object]:
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found.")
     return conversation
+
+
+@app.patch("/api/conversations/{conversation_id}")
+def update_conversation(conversation_id: str, request: LibraryItemUpdateRequest) -> dict[str, object]:
+    try:
+        if request.name is not None:
+            repository.rename_conversation(conversation_id, request.name)
+        if request.pinned is not None:
+            repository.set_conversation_pinned(conversation_id, request.pinned)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return {"conversations": repository.list_conversations()}
+
+
+@app.delete("/api/conversations/{conversation_id}")
+def delete_conversation(conversation_id: str) -> dict[str, object]:
+    try:
+        repository.delete_conversation(conversation_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return {"deleted_id": conversation_id, "conversations": repository.list_conversations()}
 
 
 @app.get("/api/conversations/{conversation_id}/download")

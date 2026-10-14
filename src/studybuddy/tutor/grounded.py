@@ -9,12 +9,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from typing import Callable, Iterable
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from studybuddy.ingestion.models import KnowledgeChunk
+from studybuddy.language import matches_requested_language, rewrite_prompt
 from studybuddy.retrieval.bm25 import BM25Index
 
 
@@ -184,6 +186,12 @@ def tutor_answer(
     """Retrieve evidence and generate a grounded teaching response."""
     results = BM25Index(chunks).search(question, limit=4)
     evidence = [result.chunk for result in results]
+    if not evidence and language in {"hindi", "hinglish"} and re.search(r"[\u0900-\u097f]", question):
+        english_query = generate(
+            "Translate this student search query into concise English keywords for retrieving "
+            "course notes. Return only the keywords and do not answer the question.\nQUERY: " + question
+        ).strip()
+        evidence = [result.chunk for result in BM25Index(chunks).search(english_query, limit=4)]
     if not evidence:
         return TutorReply(
             answer="I can't find that in your uploaded material.",
@@ -193,6 +201,12 @@ def tutor_answer(
             evidence_chunk_ids=[],
         )
     answer = generate(build_tutor_prompt(question, evidence, language, learner_context))
+    if language != "english" and not matches_requested_language(answer, language):
+        answer = generate(rewrite_prompt(answer, language))
+        if not matches_requested_language(answer, language):
+            raise RuntimeError(
+                f"The local model did not follow the selected {language.title()} language. Please try again."
+            )
     return TutorReply(
         answer=answer,
         citations=[citation_for_chunk(chunk) for chunk in evidence],

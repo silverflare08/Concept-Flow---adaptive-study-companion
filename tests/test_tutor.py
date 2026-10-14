@@ -44,3 +44,38 @@ def test_tutor_prompt_uses_learner_history_to_personalise_depth() -> None:
     )
     assert "Normalisation 35%" in prompt
     assert "connect to stronger prior topics" in prompt
+
+
+def test_tutor_retries_when_local_model_ignores_hindi_selection() -> None:
+    responses = iter([
+        "## Definition\nGradient descent follows the negative gradient.",
+        "## परिभाषा\nGradient descent negative gradient की दिशा में चलता है।",
+    ])
+    prompts = []
+
+    def generator(prompt: str) -> str:
+        prompts.append(prompt)
+        return next(responses)
+
+    reply = tutor_answer("Explain gradient descent", [_chunk("Gradient descent follows the negative gradient.")], generate=generator, language="hindi")
+
+    assert "परिभाषा" in reply.answer
+    assert len(prompts) == 2
+    assert "Rewrite" in prompts[1]
+
+
+def test_hindi_question_is_translated_for_english_source_retrieval() -> None:
+    responses = iter([
+        "gradient descent negative gradient",
+        "## व्याख्या\nGradient descent negative gradient की दिशा में parameters को बदलता है।",
+    ])
+
+    reply = tutor_answer(
+        "ग्रेडिएंट डिसेंट किस दिशा में चलता है?",
+        [_chunk("Gradient descent follows the negative gradient direction.")],
+        generate=lambda prompt: next(responses),
+        language="hindi",
+    )
+
+    assert reply.coverage == "course_backed"
+    assert "व्याख्या" in reply.answer

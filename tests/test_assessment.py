@@ -8,6 +8,7 @@ from studybuddy.assessment import (
     grade_objective,
     grade_short_answer,
     humanize_math_text,
+    localize_assessment,
     parse_assessment_draft,
     question_fingerprint,
     question_similarity,
@@ -123,6 +124,29 @@ def test_generation_repairs_an_mcq_answer_without_direct_source_support() -> Non
 
     assert calls == 2
     assert draft.questions[0].correct_answer == "Negative gradient"
+
+
+def test_verified_assessment_is_localized_without_changing_structure() -> None:
+    original = parse_assessment_draft(json.dumps(mcq_payload()), allowed_chunk_ids={"optimisation-1"})
+
+    def translate(prompt: str) -> str:
+        payload = original.model_dump()
+        payload["title"] = "अनुकूलन जाँच"
+        question = payload["questions"][0]
+        question["prompt"] = "Gradient descent किस दिशा का उपयोग करता है?"
+        question["topic"] = "Gradient descent की दिशा"
+        question["options"] = ["Negative gradient", "Positive gradient", "Random दिशा", "कोई दिशा नहीं"]
+        question["correct_answer"] = "Negative gradient"
+        question["explanation"] = "Notes बताते हैं कि parameters negative gradient की दिशा में जाते हैं। इससे objective कम होता है, इसलिए यही सही उत्तर है और positive या random दिशा सही नहीं है।"
+        return json.dumps(payload, ensure_ascii=False)
+
+    localized = localize_assessment(
+        original, "hindi", generate_json=translate, allowed_chunk_ids={"optimisation-1"},
+    )
+
+    assert "किस दिशा" in localized.questions[0].prompt
+    assert localized.questions[0].question_id == original.questions[0].question_id
+    assert localized.questions[0].evidence_chunk_ids == original.questions[0].evidence_chunk_ids
 
 
 def test_objective_grading_handles_mcq_and_numeric_tolerance() -> None:

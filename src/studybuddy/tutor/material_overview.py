@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from studybuddy.ingestion.models import KnowledgeChunk
+from studybuddy.language import matches_requested_language, rewrite_prompt
 from studybuddy.tutor.course_map_generator import batch_chunks
 from studybuddy.tutor.grounded import citation_for_chunk
 
@@ -63,7 +64,12 @@ def generate_material_overview(
         try:
             if not model_available:
                 raise RuntimeError("The configured local model is not currently available.")
-            lessons.append(generate(build_overview_prompt(title, batch, index, len(batches), language)).strip())
+            lesson = generate(build_overview_prompt(title, batch, index, len(batches), language)).strip()
+            if language != "english" and not matches_requested_language(lesson, language):
+                lesson = generate(rewrite_prompt(lesson, language)).strip()
+                if not matches_requested_language(lesson, language):
+                    raise ValueError(f"The model did not return the selected {language} language.")
+            lessons.append(lesson)
         except RuntimeError:
             fallback_sections += 1
             lessons.append(extractive_lesson(batch, index, len(batches)))

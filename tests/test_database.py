@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime, timedelta, timezone
 
 from studybuddy.course_map import Concept, CourseMap
 from studybuddy.database import StudyRepository
@@ -142,7 +143,11 @@ def test_assessment_answers_report_and_mastery_are_persistent(tmp_path: Path) ->
     artifact_id = repository.save_assessment_results(
         assessment_id,
         feedback,
-        {"percentage": 100.0, "weak_topics": [], "feedback": []},
+        {
+            "percentage": 100.0, "correct_questions": 1, "total_questions": 1,
+            "topic_summary": [{"topic": "Gradient descent", "accuracy": 100.0, "questions": 1}],
+            "weak_topics": [], "misconceptions": [], "feedback": [],
+        },
     )
 
     restored = StudyRepository(tmp_path / "conceptflow.db")
@@ -157,6 +162,9 @@ def test_assessment_answers_report_and_mastery_are_persistent(tmp_path: Path) ->
     assert progress["completed_assessments"] == 1
     assert progress["average_score"] == 100
     assert progress["answered_questions"] == 1
+    assert progress["correct_questions"] == 1
+    assert progress["total_questions"] == 1
+    assert progress["topic_performance"][0]["accuracy"] == 100
     assert progress["score_history"][0]["score"] == 100
     assert progress["mastery_history"][0]["signal"] == "quiz_answer"
     assert progress["mastery_gain"] > 0
@@ -183,3 +191,48 @@ def test_grounded_conversations_create_conservative_mastery_updates(tmp_path: Pa
         "grounded_conversation", "grounded_conversation",
     ]
     assert progress["mastery_gain"] > 0
+
+
+def test_courses_and_chats_can_be_renamed_pinned_and_managed(tmp_path: Path) -> None:
+    repository = StudyRepository(tmp_path / "conceptflow.db")
+    course_id = repository.create_course("Old course")
+    chat_id = repository.save_chat_exchange(
+        course_id=course_id, question="Original chat", answer="Saved answer", response_metadata={},
+    )
+
+    repository.rename_course(course_id, "Linear Algebra")
+    repository.set_course_pinned(course_id, True)
+    repository.rename_conversation(chat_id, "Eigenvector revision")
+    repository.set_conversation_pinned(chat_id, True)
+
+    assert repository.list_courses()[0]["name"] == "Linear Algebra"
+    assert repository.list_courses()[0]["pinned"] is True
+    assert repository.list_conversations()[0]["title"] == "Eigenvector revision"
+    assert repository.list_conversations()[0]["pinned"] is True
+
+    repository.delete_conversation(chat_id)
+    assert repository.get_conversation(chat_id) is None
+
+
+def test_study_plans_reminders_and_daily_activity_are_persistent(tmp_path: Path) -> None:
+    repository = StudyRepository(tmp_path / "conceptflow.db")
+    course_id = repository.create_course("Calculus")
+    scheduled = datetime.now(timezone.utc) + timedelta(hours=2)
+    reminder = datetime.now(timezone.utc) - timedelta(minutes=5)
+
+    event = repository.create_study_event(
+        course_id, title="Revise limits", notes="Use chapter two", kind="revision",
+        scheduled_for=scheduled, reminder_at=reminder,
+    )
+    assert repository.list_study_events(course_id)[0]["title"] == "Revise limits"
+    assert repository.due_reminders()[0]["id"] == event["id"]
+
+    updated = repository.update_study_event(event["id"], title="Revise limits and continuity")
+    assert updated["title"] == "Revise limits and continuity"
+
+    repository.update_study_event(event["id"], completed=True)
+    assert repository.due_reminders() == []
+    assert repository.progress_summary(course_id)["study_events"][0]["completed"] is True
+
+    repository.delete_study_event(event["id"])
+    assert repository.list_study_events(course_id) == []
