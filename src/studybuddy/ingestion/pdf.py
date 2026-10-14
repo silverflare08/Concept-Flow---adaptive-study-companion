@@ -1,9 +1,8 @@
 """PDF ingestion with page-accurate source anchors.
 
-The implementation starts with robust text extraction via pypdf. Visual assets
-are extracted as individual files and represented as evidence segments; an
-OCR/vision description stage can enrich those segments without breaking the
-citation contract.
+Selectable text is extracted via pypdf. Scanned and image-heavy pages are
+rendered with PyMuPDF and transcribed by the injected local vision reader.
+Every text or visual segment retains its exact PDF page citation.
 """
 
 from __future__ import annotations
@@ -76,6 +75,41 @@ def ingest_pdf(
             page=page_number,
         )
         text = (page.extract_text() or "").strip()
+        # Scanner PDFs often have no text layer, or only a page header. Render
+        # the entire page to preserve handwriting, tiled scans and annotations.
+        scan_path = None
+        if describe_image is not None:
+            try:
+                import pymupdf
+            except ImportError as error:
+                raise RuntimeError("Scanned PDF support needs PyMuPDF. Install the ingestion dependencies: pip install -e '.[ingestion]'") from error
+            with pymupdf.open(str(pdf_path)) as rendered_document:
+                rendered_page = rendered_document[page_number - 1]
+                page_area = max(rendered_page.rect.get_area(), 1)
+                raster_area = sum(pymupdf.Rect(image["bbox"]).get_area() for image in rendered_page.get_image_info())
+                needs_vision = len(text) < 80 or raster_area / page_area > 0.5
+                if needs_vision:
+                    image_dir.mkdir(parents=True, exist_ok=True)
+                    scan_path = image_dir / f"{source_id}-p{page_number}-scan.png"
+                    # Keep handwriting readable without sending huge camera scans.
+                    scale = min(2.5, 2400 / max(rendered_page.rect.width, rendered_page.rect.height))
+                    pixmap = rendered_page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), alpha=False)
+                    pixmap.save(str(scan_path))
+            if scan_path is not None:
+                extracted_images.append(scan_path)
+                try:
+                    description = describe_image(scan_path)
+                except Exception as error:
+                    raise RuntimeError(f"Could not read scanned PDF page {page_number}: {error}") from error
+                if not description or not description.strip():
+                    raise RuntimeError(f"No readable content was returned for scanned PDF page {page_number}. Try a clearer scan.")
+                segments.append(SourceSegment(
+                    text=description.strip(), citation=anchor,
+                    evidence_kind=EvidenceKind.VISION, image_path=str(scan_path),
+                ))
+                # Full-page transcription includes the visible text and images;
+                # avoid sending the same scan through vision a second time.
+                continue
         if text:
             segments.append(SourceSegment(text=text, citation=anchor, evidence_kind=EvidenceKind.TEXT))
 

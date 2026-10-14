@@ -20,7 +20,9 @@ def describe_study_image(path: str | Path) -> str:
     model = os.getenv("OLLAMA_VISION_MODEL", "qwen3-vl:2b")
     prompt = (
         "/no_think\nTranscribe all readable printed or handwritten text. Then describe visible "
-        "diagrams, equations, charts, labels and arrows. Do not add facts."
+        "diagrams, equations, charts, labels and arrows. Preserve reading order, headings, "
+        "numbers and mathematical symbols. Mark unclear handwriting as [unclear]; do not "
+        "guess missing words or invent solutions. Do not add facts."
     )
     payload = json.dumps({
         "model": model, "stream": False,
