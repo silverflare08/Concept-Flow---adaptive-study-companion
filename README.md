@@ -28,7 +28,7 @@ git clone https://github.com/silverflare08/Concept-Flow---adaptive-study-compani
 cd Concept-Flow---adaptive-study-companion
 ```
 
-Then run:
+For the first installation, run:
 
 ```bash
 python scripts/setup.py
@@ -38,6 +38,23 @@ python scripts/start.py
 On macOS/Linux, use `python3.11` if `python` is unavailable. Open **http://127.0.0.1:5173**. Keep the terminal open; **Ctrl+C stops both servers**.
 
 Setup creates `.venv`, installs Python/frontend dependencies, downloads the text, vision and speech models, and checks the installation. Existing downloads are reused. The two Ollama models occupy roughly 4 GB in total; allow additional space for packages and Whisper. A GPU is optional; CPU inference is slower. Python 3.11.9 and Node 24.18.0 were tested on Windows.
+
+### Start again after setup
+
+Open PowerShell or a terminal in the **repository root**: the folder containing `README.md`, `pyproject.toml`, `scripts/` and `web/`. If your terminal is elsewhere, first run `cd "path/to/your/project"` using your actual project location.
+
+1. Open the Ollama application and leave it running. If it is not running, use a separate terminal to run `ollama serve`. An address-already-in-use message usually means a service is already listening; do not start a second copy.
+2. In the project terminal, run:
+
+   ```bash
+   python scripts/start.py
+   ```
+
+3. Open [ConceptFlow](http://127.0.0.1:5173) in your browser.
+
+The launcher starts and connects **both the frontend and Python backend**. No virtual-environment activation or separate `npm`/`uvicorn` command is needed. Keep the terminal open while studying; press **Ctrl+C** there to stop both servers. On macOS/Linux, use `python3.11` if needed.
+
+You do not need to run setup, reinstall dependencies or run tests every time. Rerun setup when dependencies are missing or have changed. Restart the launcher after updating backend code.
 
 ### Try it
 
@@ -94,21 +111,30 @@ Defaults work without configuration. To override them, copy `.env.example` to `.
 | `OLLAMA_VISION_MODEL` | `qwen3-vl:2b-instruct` |
 | `WHISPER_MODEL` | `base` |
 | `WHISPER_DEVICE` / `WHISPER_COMPUTE_TYPE` | `cpu` / `int8` |
+| `WHISPER_BEAM_SIZE` | `5` (use `1` for faster decoding, with an accuracy trade-off) |
 | `CONCEPTFLOW_CACHE_DIR` | `data/cache` |
 
 Use the vision **instruct** model for image transcription. If you change the speech model, download it before using recordings. GPU speech settings require a compatible CUDA installation.
 
 For unavailable ports:
 
+Stop any previous project servers with **Ctrl+C**, or choose different ports:
+
 ```bash
 python scripts/start.py --api-port 8011 --web-port 5174
 ```
+
+With these ports, open [http://127.0.0.1:5174](http://127.0.0.1:5174).
 
 The launcher connects the frontend to the selected API port. API documentation is available at `http://127.0.0.1:8000/docs` with the default ports.
 
 ## Performance and local data
 
-The first image reading or lesson requires model inference and can take tens of seconds or longer, depending on hardware and content. Successful image transcriptions and full-lesson responses are cached locally. Repeating the same input can reuse that result; changed input, prompts or model settings create a different cache entry. This does not make an uncached long lecture instantaneous.
+The first image reading or lesson requires model inference and can take tens of seconds or longer, depending on hardware and content. Successful image readings, lesson drafts and timestamped speech transcripts are cached locally. The speech model stays loaded between recordings. Repeating the same input can reuse that result; changed input, prompts or model settings create a different cache entry. First-time long lectures still require full transcription and can take minutes on a CPU.
+
+Mind maps and learning flows share a validated study guide rather than generating it twice. Completed guides, valid guide sections and approved lesson checks are reused for unchanged material. Exact overlapping text at the same source location is removed only from model prompts; stored material and citations remain intact. New material still requires local inference, and generation time grows with its length. Assessment question drafting and grading are not served from this static guide cache.
+
+Full-material lessons check for repetitive or unfinished output and run a separate model-based source-comparison pass. Rejected sections are clearly labelled source excerpts rather than confident explanations. This check is not a proof of mathematical correctness: review critical formulas against the original material. Previously saved lessons are not silently rewritten; regenerate them to use the new checks. PDF downloads typeset headings, lists, tables and Unicode text rather than flattening a lesson into one paragraph.
 
 Workspaces and progress live in `data/conceptflow.db`; source files in `data/uploads/`; private cached responses in `data/cache/`. Back up these folders if you want to preserve your work.
 
@@ -127,6 +153,33 @@ User files, databases, caches, `.env`, virtual environments and `node_modules` a
 | Personalization | Bayesian Knowledge Tracing |
 
 [Architecture](docs/architecture.md)
+
+## Project architecture
+
+```text
+React + Tailwind interface
+          |
+      FastAPI backend
+          |
+          +-- Material readers --> Text with page / slide / timestamp citations
+          |                            |
+          |                      Evidence indexing
+          |                            |
+          +-- Tutor <---------- BM25 retrieval --> Ollama explanation
+          +-- Learning flows / mind maps --------> Shared source-linked guide
+          +-- Assessments --> Answer checks --> Feedback --> Topic mastery (BKT)
+          |
+          +-- SQLite: workspaces, extracted text, chats, reports and learning events
+          +-- Local files: original uploads and private reusable model results
+```
+
+**How RAG works here:** a question first retrieves relevant passages from the uploaded material using BM25. The local model receives those passages and learner context to explain the answer. Citation locations come from the application, not invented model page numbers. Full-material lessons and maps process the selected evidence in source order rather than relying on a single search result.
+
+**Multimodal reading:** document readers extract text; the local vision model reads images and scanned pages; faster-whisper transcribes audio and video speech with timestamps. Extraction and AI answers can be imperfect, so unclear or rejected lesson sections are flagged for review.
+
+**Personalization:** assessment outcomes and learning events update per-topic mastery estimates. Stored reports drive weak-topic revision and progress views. This is not model fine-tuning: it uses a learner model alongside local inference.
+
+Language choices are **English**, **Hindi in Devanagari**, and **Hinglish in English letters** (Romanised Hindi with English technical terms). For example: “Standardisation se features ka scale comparable ho jata hai.” Language checks are heuristic; the local model is not guaranteed to follow every instruction correctly.
 
 ## Development
 
@@ -168,3 +221,5 @@ ConceptFlow is a local application. Authentication, per-user isolation and publi
 Video reading transcribes speech; it does not analyse every frame. Specialist formats have the limits listed in the format reference. Browser speech availability varies, and narrated slides are not downloadable generated videos. Reminders appear while using or reopening the app; closed-browser push notifications are not implemented.
 
 AI answers, handwriting transcription and question verification can contain errors. Dense/hybrid retrieval benchmarks, formal RAG evaluation and simulated-learner measurements remain planned work. The current Tailwind 3 build dependencies also have reported npm advisories that need review before public deployment.
+
+Assessment drafting uses schema-constrained output plus source/answer checks. Romanised-Hinglish localization keeps verified options and answer keys unchanged; the question and worked explanation are rewritten. If the model still ignores the requested language after a retry, the assessment is rejected rather than labelled as correctly translated.
