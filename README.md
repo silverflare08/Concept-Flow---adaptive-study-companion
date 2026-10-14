@@ -1,6 +1,6 @@
 # ConceptFlow
 
-ConceptFlow turns your notes, books, slides and recordings into a source-grounded study workspace. Learn with cited explanations, revise with maps and flashcards, and track your understanding through assessments.
+ConceptFlow turns your notes, books, slides, recordings and **YouTube lectures** into a source-grounded study workspace. Learn with cited explanations, revise with maps and flashcards, and track your understanding through assessments.
 
 It keeps your learning connected and organised, so you can focus on understanding rather than searching through scattered files.
 
@@ -10,6 +10,12 @@ It keeps your learning connected and organised, so you can focus on understandin
   - Upload documents, images, handwritten notes and audio/video recordings.
   - Capture notes with the camera or import supported public links.
   - Organise subjects into workspaces and add material notes.
+
+- **Learn from YouTube lectures**
+  - Import a supported public YouTube link directly into a workspace.
+  - Turn lecture speech into an organised, timestamped transcript.
+  - Ask questions and generate lessons, learning flows, revision maps, flashcards and assessments from the imported content.
+  - Follow timestamp citations back to the relevant moment in the original video.
 
 - **Source-grounded tutoring**
   - Ask questions or generate lessons from selected material.
@@ -122,7 +128,7 @@ On macOS/Linux, use `python3.11` if needed. On Windows, if your global Python co
 ## Using ConceptFlow
 
 1. Sign in and create a workspace in **Materials**.
-2. Upload your material, then open **Learn** for explanations.
+2. Upload your material or import a public **YouTube lecture link** in Materials, then open **Learn** for explanations.
 3. Generate revision maps, learning flows or flashcards.
 4. Take an assessment and check **Progress**.
 5. Revisit or download saved work in **History**.
