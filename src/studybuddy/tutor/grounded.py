@@ -16,7 +16,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from studybuddy.ingestion.models import KnowledgeChunk
-from studybuddy.language import matches_requested_language, rewrite_prompt
+from studybuddy.language import HINGLISH_INSTRUCTION, matches_requested_language, rewrite_prompt
 from studybuddy.retrieval.bm25 import BM25Index
 
 
@@ -72,7 +72,7 @@ def build_tutor_prompt(
     language_instruction = {
         "english": "Explain in clear, natural English.",
         "hindi": "Explain in natural Hindi using Devanagari script, while retaining necessary technical terms in English.",
-        "hinglish": "Explain in natural conversational Hinglish: Hindi in Devanagari mixed with familiar English technical terms.",
+        "hinglish": HINGLISH_INSTRUCTION,
     }.get(language, "Explain in clear, natural English.")
     return f"""You are ConceptFlow, a patient and accurate study tutor.
 
@@ -86,9 +86,12 @@ most two short paragraphs, then one brief check-understanding question. Do not
 include a Sources section because the application shows verified citations
 separately.
 {language_instruction}
-Make mathematical expressions human-readable. Prefer Unicode symbols and plainly written equations,
-for example “x² + y² = r²” and “(a + b) / c”. Never output raw LaTeX delimiters such as \\( \\),
-\\[ \\], dollar-sign math blocks, or unexplained backslash commands.
+Make mathematical expressions human-readable. Use Unicode for simple equations.
+For fractions, sums, integrals or complex expressions, use valid LaTeX enclosed in
+$...$ for inline maths or $$...$$ for a separate equation; the app typesets these.
+Never output raw LaTeX commands outside math delimiters. Put each equation on its own line.
+Preserve the source notation exactly. If symbols or equations are unclear or contradictory,
+say they need checking in the original page; never guess a correction.
 Use clean Markdown like a short textbook chapter: meaningful headings, short paragraphs,
 labelled definitions, numbered solution steps, and concise bullet lists. Never use repeated
 asterisks, slashes, raw formatting characters, or ASCII art as decoration.
@@ -117,6 +120,7 @@ def call_ollama(prompt: str) -> str:
         {
             "model": model,
             "stream": False,
+            "keep_alive": "10m",
             "messages": [{"role": "user", "content": prompt}],
             "options": {"temperature": 0, "num_predict": 260},
         }
@@ -138,13 +142,48 @@ def call_ollama_json(prompt: str) -> str:
     """Ask local Ollama for a JSON-only response used by structured features."""
     endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
     model = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
+    output_format: object = "json"
+    # Assessment schemas constrain structure, not factual correctness. Independent
+    # answer/source checks still run after drafting.
+    if prompt.startswith("Create exactly") or prompt.startswith("Rewrite this VERIFIED assessment"):
+        from studybuddy.assessment import AssessmentDraft
+        output_format = AssessmentDraft.model_json_schema()
+        requested = re.search(r"Create exactly (\d+) assessment questions", prompt)
+        if requested:
+            count = int(requested.group(1))
+            output_format["properties"]["questions"].update(minItems=count, maxItems=count)
+            question_schema = output_format["$defs"]["AssessmentQuestion"]
+            question_schema["required"] = list(dict.fromkeys(question_schema["required"] + ["options", "evidence_chunk_ids"]))
+            kinds = re.search(r"Allowed question types: (\[[^\n]+\])", prompt)
+            if kinds:
+                allowed_types = json.loads(kinds.group(1))
+                question_schema["properties"]["question_type"]["enum"] = allowed_types
+                if allowed_types == ["mcq"]:
+                    question_schema["properties"]["options"].update(minItems=4, maxItems=4)
+            ids = list(dict.fromkeys(re.findall(r"CHUNK_ID: ([^\n]+)", prompt)))
+            if ids:
+                question_schema["properties"]["evidence_chunk_ids"].update(minItems=1, maxItems=2, items={"type": "string", "enum": ids})
+        elif "Romanised Hindi" in prompt:
+            # Romanise the teaching text while locking the already verified key,
+            # IDs and structural fields. Translation must not invalidate a quiz.
+            import copy
+            original, _ = json.JSONDecoder().raw_decode(prompt.split("ASSESSMENT JSON:\n", 1)[1].lstrip())
+            variants = []
+            for item in original["questions"]:
+                variant = copy.deepcopy(output_format["$defs"]["AssessmentQuestion"])
+                for key in ("question_id", "question_type", "difficulty", "evidence_chunk_ids", "numerical_tolerance", "options", "correct_answer"):
+                    variant["properties"][key] = {"const": item[key]}
+                variant["required"] = list(dict.fromkeys(variant["required"] + list(item)))
+                variants.append(variant)
+            output_format["properties"]["questions"].update(minItems=len(variants), maxItems=len(variants), items={"anyOf": variants})
     payload = json.dumps(
         {
             "model": model,
             "stream": False,
-            "format": "json",
+            "keep_alive": "10m",
+            "format": output_format,
             "messages": [{"role": "user", "content": prompt}],
-            "options": {"temperature": 0.1, "num_ctx": 8192, "num_predict": 2400},
+            "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 2400, "repeat_penalty": 1.1},
         }
     ).encode("utf-8")
     request = Request(endpoint, data=payload, headers={"Content-Type": "application/json"}, method="POST")
@@ -164,14 +203,14 @@ def call_ollama_long(prompt: str) -> str:
     """Generate a longer grounded lesson while keeping the model local and deterministic."""
     endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
     model = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
-    cached_path = cache_path('lessons', {'version': 1, 'model': model, 'endpoint': endpoint, 'prompt': prompt})
+    cached_path = cache_path('lessons', {'version': 2, 'model': model, 'endpoint': endpoint, 'prompt': prompt})
     cached = read_cached(cached_path)
     if cached is not None:
         return cached
     payload = json.dumps({
         "model": model, "stream": False, "keep_alive": "10m",
         "messages": [{"role": "user", "content": prompt}],
-        "options": {"temperature": 0.1, "num_ctx": 8192, "num_predict": 1100},
+        "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 1800, "repeat_penalty": 1.12},
     }).encode("utf-8")
     request = Request(endpoint, data=payload, headers={"Content-Type": "application/json"}, method="POST")
     try:
@@ -182,8 +221,44 @@ def call_ollama_long(prompt: str) -> str:
     answer = body.get("message", {}).get("content", "").strip()
     if not answer:
         raise RuntimeError("The local tutor model returned an empty lesson.")
+    from studybuddy.tutor.material_overview import usable_lesson
+    if body.get("done_reason") == "length" or not usable_lesson(answer):
+        raise RuntimeError("The local model produced an unfinished or repetitive lesson. Showing source excerpts instead.")
     save_cached(cached_path, answer)
     return answer
+
+
+@cancellable
+def verify_lesson(prompt: str) -> str:
+    """Independent source-comparison pass, not a mathematical proof of correctness."""
+    endpoint = os.getenv("OLLAMA_URL", DEFAULT_OLLAMA_URL)
+    model = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
+    checked_path = cache_path("lesson-checks", {"version": 1, "prompt": prompt, "model": model, "endpoint": endpoint})
+    cached = read_cached(checked_path)
+    if cached:
+        try:
+            if json.loads(cached).get("supported") is True:
+                return cached
+        except (ValueError, AttributeError):
+            pass
+    payload = json.dumps({
+        "model": model, "stream": False,
+        "format": "json", "keep_alive": "10m",
+        "messages": [{"role": "user", "content": prompt}],
+        "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 350},
+    }).encode("utf-8")
+    try:
+        with urlopen(Request(endpoint, data=payload, headers={"Content-Type": "application/json"}), timeout=120) as response:
+            body = json.loads(response.read().decode())
+        result = body["message"]["content"]
+        verdict = json.loads(result)
+        if not isinstance(verdict, dict) or not isinstance(verdict.get("supported"), bool) or body.get("done_reason") == "length":
+            raise RuntimeError("The lesson check did not return a complete verdict.")
+        if verdict["supported"]:
+            save_cached(checked_path, result)
+        return result
+    except (URLError, TimeoutError, KeyError, ValueError) as error:
+        raise RuntimeError("The lesson could not be checked against its sources.") from error
 
 
 def tutor_answer(
@@ -197,7 +272,7 @@ def tutor_answer(
     """Retrieve evidence and generate a grounded teaching response."""
     results = BM25Index(chunks).search(question, limit=4)
     evidence = [result.chunk for result in results]
-    if not evidence and language in {"hindi", "hinglish"} and re.search(r"[\u0900-\u097f]", question):
+    if not evidence and (language == "hinglish" or language == "hindi" and re.search(r"[\u0900-\u097f]", question)):
         english_query = generate(
             "Translate this student search query into concise English keywords for retrieving "
             "course notes. Return only the keywords and do not answer the question.\nQUERY: " + question

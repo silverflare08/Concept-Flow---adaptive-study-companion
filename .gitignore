@@ -10,10 +10,14 @@ __pycache__/
 data/uploads/
 data/index/
 data/cache/
+data/users/
 data/**/*.tmp
 tmp/
 web/node_modules/
 web/dist/
+.vite/
+# Local Git inspection output
+/status
 *.sqlite3
 *.sqlite
 *.sqlite-*

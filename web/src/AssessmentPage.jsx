@@ -15,7 +15,7 @@ const TYPES = [
   ["fill_blank", "Fill in the blank"],
 ];
 
-export default function AssessmentPage({ api, workspace, guide, refreshLibrary }) {
+export default function AssessmentPage({ api, workspace, guide, refreshLibrary, preferences = {} }) {
   const topics = useMemo(() => Array.from(new Set(guide?.concepts?.map(item => item.topic).filter(Boolean) || [])), [guide]);
   const [scope, setScope] = useState([]), [count, setCount] = useState(5);
   const [difficulty, setDifficulty] = useState("medium"), [types, setTypes] = useState(["mcq", "short_answer"]);
@@ -24,6 +24,8 @@ export default function AssessmentPage({ api, workspace, guide, refreshLibrary }
   const [busy, setBusy] = useState(""), [error, setError] = useState("");
   const [builderMode, setBuilderMode] = useState("quick"), [assessmentLanguage, setAssessmentLanguage] = useState("english");
   const [testLayout, setTestLayout] = useState("focus"), [activeQuestion, setActiveQuestion] = useState(0);
+  useEffect(() => { setDifficulty(preferences.quiz_difficulty || "medium"); }, [preferences.quiz_difficulty]);
+  useEffect(() => { setAssessmentLanguage(preferences.language || "english"); }, [preferences.language]);
 
   async function refreshAssessments() {
     const response = await fetch(`${api}/api/assessments`);

@@ -6,6 +6,7 @@ export const subscribeGeneration = listener => { listeners.add(listener); return
 export const generationCount = () => active.size + jobs.size;
 
 export async function generationFetch(url, options = {}) {
+  options = { credentials: "include", ...options };
   const tracked = options.method === "POST" && /\/api\/(tutor(?:$|\/overview$)|study-guide\/generate|course-map\/generate|assessments(?:$|\/[^/]+\/submit$)|materials(?:$|\/url$))/.test(String(url));
   const id = tracked ? crypto.randomUUID() : null;
   const controller = tracked ? new AbortController() : null;
@@ -13,6 +14,7 @@ export async function generationFetch(url, options = {}) {
   if (id) { active.set(id, { controller, base }); update(); }
   try {
     const response = await window.fetch(url, tracked ? { ...options, signal: controller.signal, headers: { ...options.headers, "X-Generation-Id": id } } : options);
+    if (response.status === 401) window.dispatchEvent(new Event("conceptflow-session-expired"));
     if (response.ok && response.headers.get("content-type")?.includes("application/json")) {
       const data = await response.clone().json();
       if (data.job?.job_id) {

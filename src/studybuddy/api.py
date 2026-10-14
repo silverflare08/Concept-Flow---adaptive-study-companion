@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 from threading import Event
+from studybuddy.account_context import AccountProxy, account_context, submit_account_job
 from studybuddy.cancellation import current_cancel, requests as cancellable_requests, check_cancelled, GenerationStopped
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -26,6 +27,7 @@ from pydantic import BaseModel, Field
 from studybuddy.course_map import CourseMap
 from studybuddy.database import StudyRepository
 from studybuddy.exports import export_response
+from studybuddy.transcripts import organized_transcript
 from studybuddy.assessment import (
     AssessmentQuestion,
     generate_assessment,
@@ -41,7 +43,7 @@ from studybuddy.ingestion.web import fetch_public_resource, ingest_web_page, is_
 from studybuddy.ingestion.youtube import download_youtube_audio
 from studybuddy.retrieval.bm25 import BM25Index
 from studybuddy.tutor.course_map_generator import generate_course_map
-from studybuddy.tutor.grounded import call_ollama_json, call_ollama_long, ollama_available, tutor_answer
+from studybuddy.tutor.grounded import call_ollama_json, call_ollama_long, ollama_available, tutor_answer, verify_lesson
 from studybuddy.tutor.material_overview import generate_material_overview
 
 
@@ -86,6 +88,29 @@ def load_or_create_workspace() -> Workspace:
 
 
 workspace = load_or_create_workspace()
+repository = AccountProxy("repository", repository)
+workspace = AccountProxy("workspace", workspace)
+UPLOAD_ROOT = AccountProxy("upload_root", UPLOAD_ROOT)
+
+
+def assign_workspace(value):
+    global workspace
+    context = account_context.get()
+    if context is not None:
+        context["workspace"] = value
+    else:
+        # Used by direct repository/unit tests; unauthenticated HTTP is blocked.
+        workspace = value
+
+
+def current_user_id():
+    context = account_context.get()
+    return context["user_id"] if context is not None else None
+
+
+def check_job_owner(job):
+    if account_context.get() is not None and job.get("user_id") != current_user_id():
+        raise HTTPException(status_code=404, detail="Generation not found.")
 guide_executor = ThreadPoolExecutor(max_workers=1)
 overview_executor = ThreadPoolExecutor(max_workers=1)
 overview_jobs: dict[str, dict[str, object]] = {}
@@ -96,18 +121,18 @@ async def cancellation_context(request, call_next):
     request_id = request.headers.get("X-Generation-Id")
     event = Event() if request_id else None
     if request_id:
-        cancellable_requests[request_id] = event
+        cancellable_requests[f"{current_user_id()}:{request_id}"] = event
     token = current_cancel.set(event)
     try:
         return await call_next(request)
     finally:
         current_cancel.reset(token)
         if request_id:
-            cancellable_requests.pop(request_id, None)
+            cancellable_requests.pop(f"{current_user_id()}:{request_id}", None)
 
 @app.post("/api/generation/{request_id}/stop")
 def stop_request(request_id: str):
-    event = cancellable_requests.get(request_id)
+    event = cancellable_requests.get(f"{current_user_id()}:{request_id}")
     if event:
         event.set()
     return {"status": "cancelled"}
@@ -119,6 +144,7 @@ def stop_background_job(job_id: str):
         job = workspace.guide_job
     if job is None:
         raise HTTPException(status_code=404, detail="Generation not found.")
+    check_job_owner(job)
     if job.get("status") == "running":
         job.update(status="cancelled", error="Stopped by you.")
     return {"job": dict(job)}
@@ -128,6 +154,7 @@ app.add_middleware(
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1):\d+",
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
 
@@ -426,7 +453,7 @@ def create_workspace(request: WorkspaceRequest) -> dict[str, object]:
     record = repository.load_course(course_id)
     if record is None:
         raise HTTPException(status_code=500, detail="Could not create the course workspace.")
-    workspace = workspace_from_record(record)
+    assign_workspace(workspace_from_record(record))
     return workspace_summary()
 
 
@@ -441,7 +468,7 @@ def activate_course(course_id: str) -> dict[str, object]:
     record = repository.load_course(course_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Course workspace not found.")
-    workspace = workspace_from_record(record)
+    assign_workspace(workspace_from_record(record))
     return workspace_summary()
 
 
@@ -488,7 +515,7 @@ def delete_course(course_id: str) -> dict[str, object]:
         record = repository.load_course(next_course_id)
         if record is None:
             raise HTTPException(status_code=500, detail="Could not activate a remaining workspace.")
-        workspace = workspace_from_record(record)
+        assign_workspace(workspace_from_record(record))
     return {"workspace": workspace_summary(), "courses": repository.list_courses()}
 
 
@@ -675,7 +702,7 @@ def run_guide_job(
             raise GenerationStopped("Stopped by you.")
         job.update(completed_batches=completed, total_batches=total)
     try:
-        generated = generate_course_map(title, chunks, generate_json=call_ollama_json, on_progress=progress)
+        generated = generate_course_map(title, chunks, generate_json=call_ollama_json, on_progress=progress, reuse_cache=True)
         if job.get("status") == "cancelled":
             return
         if workspace.course_id != course_id or workspace.revision != revision:
@@ -706,9 +733,10 @@ def start_study_guide(request: GuideRequest | None = None) -> dict[str, object]:
         "job_id": uuid4().hex, "status": "running", "completed_batches": 0,
         "total_batches": 0, "source_ids": source_ids, "source_chunks": len(chunks),
         "analysis_chunks": len(compacted_chunks),
+        "user_id": current_user_id(),
     }
     workspace.guide_job = job
-    guide_executor.submit(
+    submit_account_job(guide_executor,
         run_guide_job, job, workspace.course_id, workspace.revision,
         workspace.name, compacted_chunks, source_ids,
     )
@@ -764,12 +792,15 @@ def create_course_map(request: GuideRequest | None = None) -> dict[str, object]:
             workspace.name,
             chunks,
             generate_json=call_ollama_json,
+            reuse_cache=True,
         )
         workspace.guide_source_ids = source_ids
         workspace.guide_evidence = {chunk.chunk_id: chunk for chunk in chunks}
         repository.save_course_map(workspace.course_id, workspace.course_map)
     except (RuntimeError, ValueError) as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
+
+
     return {"course_map": course_map_view(workspace.course_map)}
 
 
@@ -846,7 +877,7 @@ def run_overview_job(
         job.update(completed_batches=completed, total_batches=total)
     try:
         lesson = generate_material_overview(
-            title, chunks, generate=call_ollama_long, on_progress=progress,
+            title, chunks, generate=call_ollama_long, on_progress=progress, verify=verify_lesson,
             model_available=ollama_available(), language=language,
         )
         if job.get("status") == "cancelled":
@@ -857,6 +888,9 @@ def run_overview_job(
             response_metadata={
                 "citations": lesson["citations"], "follow_up": lesson["follow_up"],
                 "coverage": lesson["coverage"], "mode": "full_material_lesson",
+                "generation_mode": lesson["generation_mode"],
+                "fallback_sections": lesson["fallback_sections"],
+                "fallback_reasons": lesson["fallback_reasons"],
             },
         )
         repository.record_conversation_learning(course_id, topics_for_chunks(chunks, use_active_map=False))
@@ -879,10 +913,11 @@ def start_material_overview(request: OverviewRequest) -> dict[str, object]:
     job: dict[str, object] = {
         "job_id": uuid4().hex, "status": "running", "completed_batches": 0,
         "total_batches": 0, "source_ids": source_ids, "language": request.language,
+        "user_id": current_user_id(),
     }
     workspace.overview_job = job
     overview_jobs[str(job["job_id"])] = job
-    overview_executor.submit(
+    submit_account_job(overview_executor,
         run_overview_job, job, workspace.course_id, workspace.revision,
         workspace.name, chunks, names, request.language,
     )
@@ -892,6 +927,8 @@ def start_material_overview(request: OverviewRequest) -> dict[str, object]:
 @app.get("/api/tutor/overview/status")
 def material_overview_status(job_id: str | None = None) -> dict[str, object]:
     job = overview_jobs.get(job_id) if job_id else workspace.overview_job
+    if job:
+        check_job_owner(job)
     return {"job": dict(job) if job else None}
 
 
@@ -1200,6 +1237,26 @@ def history() -> dict[str, object]:
     }
 
 
+@app.get("/api/materials/{source_id}/transcript")
+def get_material_transcript(source_id: str) -> dict[str, object]:
+    try:
+        return organized_transcript(workspace.chunks, source_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get("/api/materials/{source_id}/transcript/download")
+def download_material_transcript(source_id: str, format: DownloadFormat = "txt") -> Response:
+    transcript = get_material_transcript(source_id)
+    sections = [("About this transcript", [transcript["notice"]])]
+    sections.extend((entry["timestamp"], [entry["text"]]) for entry in transcript["entries"])
+    try:
+        return export_response(title=f"{transcript['source_name']} transcript", sections=sections,
+                               format=format, structured=transcript)
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+
 @app.get("/api/conversations/{conversation_id}")
 def get_conversation(conversation_id: str) -> dict[str, object]:
     conversation = repository.get_conversation(conversation_id)
@@ -1275,3 +1332,9 @@ def download_artifact(
         )
     except RuntimeError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
+
+
+# Install after every study route has been registered.
+import sys
+from studybuddy.auth_api import install_auth
+install_auth(sys.modules[__name__])

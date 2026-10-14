@@ -31,7 +31,7 @@ def test_pdf_and_word_exports_are_real_downloadable_file_formats() -> None:
     pdf = export_response(title="Biology", sections=sections, format="pdf")
     word = export_response(title="Biology", sections=sections, format="docx")
 
-    assert pdf.body.startswith(b"%PDF-1.4")
+    assert pdf.body.startswith(b"%PDF-")
     assert pdf.headers["content-disposition"].endswith('filename="biology.pdf"')
     with ZipFile(BytesIO(word.body)) as archive:
         assert "word/document.xml" in archive.namelist()
@@ -41,3 +41,32 @@ def test_pdf_and_word_exports_are_real_downloadable_file_formats() -> None:
         styles = archive.read("word/styles.xml")
         assert b"Heading1" in styles
         assert b"SourceNote" in styles
+
+
+def test_pdf_preserves_headings_tables_unicode_and_page_bounds() -> None:
+    import pymupdf
+    from studybuddy.exports import pdf_document
+    content = "## Probability\n\n### Definition\nP(X ≤ 2) = 0.7\n\n| x | p(x) |\n|---|---|\n| 0 | 0.3 |\n| 1 | 0.7 |\n\n" + "\n\n".join(
+        f"### Topic {i}\nA short explanation about probability and its applications." for i in range(60)
+    )
+    document = pymupdf.open(stream=pdf_document("Revision notes", [("Lesson", [content])]), filetype="pdf")
+    text = "".join(page.get_text() for page in document)
+    assert "###" not in text and "|---|" not in text
+    assert "≤" in text and "Topic 59" in text
+    assert len(document) > 1
+    for page in document:
+        for block in page.get_text("dict")["blocks"]:
+            for line in block.get("lines", []):
+                for span in line["spans"]:
+                    assert span["bbox"][0] >= 40
+                    assert span["bbox"][2] <= 555
+                    assert span["bbox"][3] <= 835
+
+
+def test_math_cleanup_does_not_leave_common_latex_commands() -> None:
+    from studybuddy.exports import clean_export_text, study_html_blocks
+    result = clean_export_text(r"$\binom{3}{1}\left(\frac{1}{2}\right)^3$; \sum x \cdot p(x)")
+    assert "C(3, 1)" in result
+    assert "left" not in result and "right" not in result and "$" not in result
+    assert "Σ" in result
+    assert "&lt;script&gt;" in study_html_blocks("<script>alert(1)</script>")

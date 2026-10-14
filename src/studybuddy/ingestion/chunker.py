@@ -37,12 +37,13 @@ def chunk_segments(
     ordinal = 0
     step = chunk_size - overlap
     for segment in segments:
-        words = _tokens(segment.text)
+        matches = list(re.finditer(r"\S+", segment.text))
+        words = [match.group() for match in matches]
         for start in range(0, len(words), step):
             window = words[start : start + chunk_size]
             if not window:
                 continue
-            text = " ".join(window)
+            text = segment.text[matches[start].start():matches[start + len(window) - 1].end()].strip()
             output.append(
                 KnowledgeChunk(
                     chunk_id=_chunk_id(segment, ordinal, text),

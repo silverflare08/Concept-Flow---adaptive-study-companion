@@ -16,9 +16,19 @@ parser.add_argument('--check',action='store_true',help='Verify startup, then sto
 args=parser.parse_args()
 
 root = Path(__file__).resolve().parents[1]
-python = root / '.venv' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+python = None
+for directory in ['.venv', '.venv311']:
+    candidate = root / directory / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+    if candidate.exists():
+        try:
+            result = subprocess.run([str(candidate), '-c', 'import uvicorn, studybuddy; print("CONCEPTFLOW_READY")'], capture_output=True, text=True, timeout=15)
+            if result.returncode == 0 and 'CONCEPTFLOW_READY' in result.stdout:
+                python = candidate
+                break
+        except (OSError, subprocess.TimeoutExpired):
+            pass
 npm = shutil.which('npm')
-if not python.exists() or not npm:
+if python is None or not npm:
     raise SystemExit('Run python scripts/setup.py first.')
 for port in [args.api_port,args.web_port]:
     with socket.socket() as probe:
@@ -28,14 +38,15 @@ children=[]
 try:
     environment=os.environ.copy()
     environment['PYTHONUNBUFFERED']='1'
-    environment['VITE_API_URL']=f'http://127.0.0.1:{args.api_port}'
+    environment['VITE_API_URL']=''
+    environment['VITE_API_PROXY']=f'http://127.0.0.1:{args.api_port}'
     command=[str(python),'-m','uvicorn','studybuddy.api:app','--host','127.0.0.1','--port',str(args.api_port)]
     if (root / '.env').exists(): command += ['--env-file', '.env']
     children.append(subprocess.Popen(command,cwd=root,env=environment,start_new_session=os.name != 'nt'))
     children.append(subprocess.Popen([npm,'run','dev','--','--host','127.0.0.1','--port',str(args.web_port)],cwd=root/'web',env=environment,start_new_session=os.name != 'nt'))
     print(f'\nConceptFlow: http://127.0.0.1:{args.web_port}\nKeep Ollama running. Ctrl+C stops both servers.',flush=True)
     if args.check:
-        for url in [f'http://127.0.0.1:{args.api_port}/api/workspace',f'http://127.0.0.1:{args.web_port}/']:
+        for url in [f'http://127.0.0.1:{args.api_port}/api/health',f'http://127.0.0.1:{args.web_port}/']:
             deadline=time.monotonic()+30
             while True:
                 try:

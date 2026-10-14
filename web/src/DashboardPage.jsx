@@ -5,42 +5,41 @@ import {
 } from "lucide-react";
 
 const TOOLS = [
-  { page: "Learn", title: "Ask your tutor", detail: "Get a cited explanation from your material.", icon: MessageSquareText, tone: "bg-sky/55" },
-  { page: "Learning Flow", title: "Learning Flow", detail: "See what to study first and what follows.", icon: BookOpen, tone: "bg-lilac/65" },
-  { page: "Revision Mind Map", title: "Revision map", detail: "Review the complete course at a glance.", icon: GitBranch, tone: "bg-mint/55" },
-  { page: "Flashcards", title: "Flashcards", detail: "Practise active recall from verified concepts.", icon: Layers3, tone: "bg-peach/55" },
-  { page: "Practise", title: "Take a test", detail: "Quick quizzes, diagnostics and exam practice.", icon: Target, tone: "bg-[#e7f0ff]" },
-  { page: "Audio & Video", title: "Listen and watch", detail: "Turn a source into a guided explanation.", icon: Headphones, tone: "bg-[#f4eafa]" },
-  { page: "Progress", title: "Progress analytics", detail: "Explore scores, mastery and weak topics.", icon: BarChart3, tone: "bg-[#e7f7ef]" },
-  { page: "History", title: "Saved work", detail: "Return to chats, reports and generated guides.", icon: Clock3, tone: "bg-[#fff0e8]" },
+  { page: "Learn", title: "Ask your tutor", detail: "Get a cited explanation from your material.", icon: MessageSquareText, accent: "106 127 153" },
+  { page: "Learning Flow", title: "Learning Flow", detail: "See what to study first and what follows.", icon: BookOpen, accent: "133 120 153" },
+  { page: "Revision Mind Map", title: "Revision map", detail: "Review the complete course at a glance.", icon: GitBranch, accent: "100 134 123" },
+  { page: "Flashcards", title: "Flashcards", detail: "Practise active recall from verified concepts.", icon: Layers3, accent: "154 134 113" },
+  { page: "Practise", title: "Take a test", detail: "Quick quizzes, diagnostics and exam practice.", icon: Target, accent: "113 123 151" },
+  { page: "Audio & Video", title: "Listen and watch", detail: "Turn a source into a guided explanation.", icon: Headphones, accent: "148 121 137" },
+  { page: "Progress", title: "Progress analytics", detail: "Explore scores, mastery and weak topics.", icon: BarChart3, accent: "104 132 137" },
+  { page: "History", title: "Saved work", detail: "Return to chats, reports and generated guides.", icon: Clock3, accent: "151 128 120" },
 ];
 
-export default function DashboardPage({ workspace, setPage, notice }) {
+export default function DashboardPage({ workspace, setPage, notice, user }) {
   const hasMaterial = workspace.source_count > 0;
   const openTool = page => setPage(hasMaterial || ["Materials", "History"].includes(page) ? page : "Materials");
 
-  return <div className="space-y-5">
-    <section className="glass-card relative overflow-hidden p-6 sm:p-8">
-      <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-lilac/70 blur-3xl"/>
-      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-52 w-52 rounded-full bg-mint/60 blur-3xl"/>
-      <div className="relative grid items-center gap-7 lg:grid-cols-[1.35fr_.65fr]">
+  return <div className="space-y-4">
+    <section className="glass-card relative overflow-hidden p-4 sm:p-5">
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-lilac/25"/>
+      <div className="relative grid items-center gap-4 lg:grid-cols-[1.35fr_.65fr]">
         <div>
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs font-bold text-plum shadow-sm"><Sparkles size={14}/> Your calm study command centre</span>
-          <h1 className="mt-4 max-w-2xl text-3xl font-black leading-tight tracking-tight text-slate-800 sm:text-4xl">What would you like to <span className="text-plum">understand today?</span></h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Upload almost any study material, learn it with exact sources, practise in different formats, and watch your understanding grow over time.</p>
-          <div className="mt-5 flex flex-wrap gap-3">
+          <p className="eyebrow">Your learning desk</p>
+          <h1 className="mt-2 max-w-2xl text-2xl font-bold leading-tight tracking-tight text-slate-800 sm:text-3xl">Welcome back{user?.name ? `, ${user.name.split(" ")[0]}` : ""}.</h1>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">{hasMaterial ? "Pick up your course, explore an idea, or practise what you learned. Your tools and saved work are right here." : "Start with your notes or a lecture. We’ll keep your sources, explanations and practice together in one study space."}</p>
+          <div className="mt-3 flex flex-wrap gap-3">
             <button onClick={() => setPage("Materials")} className="primary-button"><FilePlus2 size={17}/>{hasMaterial ? "Add material" : "Start a study space"}</button>
             {hasMaterial && <button onClick={() => setPage("Learn")} className="secondary-button"><BrainCircuit size={17}/>Continue learning<ArrowRight size={16}/></button>}
           </div>
         </div>
-        <div className="rounded-3xl border border-white/80 bg-white/65 p-5 shadow-soft backdrop-blur">
+        <div className="rounded-3xl border border-white/80 bg-white/65 p-3 shadow-soft backdrop-blur">
           <p className="eyebrow">Active study space</p>
           <h2 className="mt-2 truncate text-xl font-extrabold text-slate-800">{workspace.name}</h2>
-          <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="mt-3 grid grid-cols-2 gap-3">
             <Stat value={workspace.source_count} label="study materials"/>
             <Stat value={workspace.course_map_ready ? "Ready" : hasMaterial ? "Create" : "Waiting"} label="learning map"/>
           </div>
-          <button onClick={() => openTool(workspace.course_map_ready ? "Learning Flow" : "Materials")} className="mt-4 flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-lilac/80 to-mint/70 px-4 py-3 text-left text-sm font-bold text-slate-700"><span>{workspace.course_map_ready ? "Open your learning route" : hasMaterial ? "Build your learning route" : "Add your first material"}</span><ArrowRight size={16}/></button>
+          <button onClick={() => openTool(workspace.course_map_ready ? "Learning Flow" : "Materials")} className="mt-3 flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-lilac/80 to-mint/70 px-4 py-3 text-left text-sm font-bold text-slate-700"><span>{workspace.course_map_ready ? "Open your learning route" : hasMaterial ? "Build your learning route" : "Add your first material"}</span><ArrowRight size={16}/></button>
         </div>
       </div>
     </section>
@@ -52,10 +51,10 @@ export default function DashboardPage({ workspace, setPage, notice }) {
         <div><p className="eyebrow">Everything in one place</p><h2 className="mt-1 text-xl font-extrabold">Your study toolkit</h2></div>
         {!hasMaterial && <p className="text-xs font-medium text-slate-500">Choose any tool and we’ll take you to Materials first.</p>}
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {TOOLS.map(({ page, title, detail, icon: Icon, tone }) => <button key={page} onClick={() => openTool(page)} className="group glass-card p-4 text-left transition hover:-translate-y-1 hover:border-lavender hover:shadow-lg">
-          <div className={`grid h-10 w-10 place-items-center rounded-2xl ${tone} text-plum transition group-hover:scale-105`}><Icon size={19}/></div>
-          <div className="mt-4 flex items-center justify-between gap-2"><h3 className="font-extrabold text-slate-800">{title}</h3><ArrowRight className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-plum" size={16}/></div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {TOOLS.map(({ page, title, detail, icon: Icon, accent }) => <button key={page} onClick={() => openTool(page)} style={{ "--tool-accent": accent }} className="feature-card group glass-card p-3.5 text-left transition hover:-translate-y-0.5">
+          <div className="feature-icon grid h-9 w-9 place-items-center rounded-xl transition group-hover:scale-105"><Icon size={19}/></div>
+          <div className="mt-3 flex items-center justify-between gap-2"><h3 className="text-sm font-bold text-slate-800">{title}</h3><ArrowRight className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-plum" size={16}/></div>
           <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
         </button>)}
       </div>

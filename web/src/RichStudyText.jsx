@@ -1,4 +1,16 @@
 import React from "react";
+import katex from "katex";
+import "katex/dist/katex.min.css";
+
+function Equation({ expression, display = false }) {
+  try {
+    const html = katex.renderToString(expression, { displayMode: display, throwOnError: true,
+      trust: false, strict: "warn", output: "htmlAndMathml", maxExpand: 500 });
+    return <span className={display ? "block overflow-x-auto py-2" : "inline-block max-w-full align-middle"} dangerouslySetInnerHTML={{ __html: html }}/>;
+  } catch {
+    return <span className="font-mono text-sm" title="This expression needs checking in the original source">{expression}</span>;
+  }
+}
 
 const SYMBOLS = {
   "\\times": "×", "\\cdot": "·", "\\div": "÷", "\\pm": "±", "\\mp": "∓",
@@ -33,18 +45,42 @@ export function humanizeMath(value = "") {
 }
 
 function Inline({ text }) {
-  return humanizeMath(text).split(/(\*\*.*?\*\*|`.*?`)/g).filter(Boolean).map((part, index) => {
+  return String(text).split(/(\b[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:pdf|mp4|mp3|wav|m4a|mov|webm|mkv|docx|pptx)\b|\$\$.*?\$\$|\$[^$]+\$|\\\(.*?\\\)|\\\[.*?\\\]|\*\*.*?\*\*|`.*?`|(?<![A-Za-z0-9])[A-Za-z]\^(?:\{[^{}]+\}|[A-Za-z0-9]+)|(?<![A-Za-z0-9])[A-Za-z]_(?:\{[^{}]+\}|[A-Za-z0-9]+))/g).filter(Boolean).map((part, index) => {
+    if (/\.(?:pdf|mp4|mp3|wav|m4a|mov|webm|mkv|docx|pptx)$/i.test(part)) return <React.Fragment key={index}>{part}</React.Fragment>;
+    if (part.startsWith("$$") && part.endsWith("$$")) return <Equation key={index} expression={part.slice(2, -2)} display/>;
+    if (part.startsWith("$") && part.endsWith("$")) return <Equation key={index} expression={part.slice(1, -1)}/>;
+    if (/^\\[([]/.test(part)) return <Equation key={index} expression={part.slice(2, -2)} display={part.startsWith("\\[")}/>;
     if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
     if (part.startsWith("`") && part.endsWith("`")) return <code key={index} className="rounded bg-slate-100 px-1.5 py-0.5 text-[.92em] text-plum">{part.slice(1, -1)}</code>;
-    return <React.Fragment key={index}>{part.replace(/(^|\s)\*+(?=\s|$)/g, "$1")}</React.Fragment>;
+    if (/^[A-Za-z][\^_](?:\{[^{}]+\}|[A-Za-z0-9]+)$/.test(part)) return <Equation key={index} expression={part.replace(/^([A-Za-z])([\^_])([A-Za-z0-9]+)$/, "$1$2{$3}")}/>;
+    return <React.Fragment key={index}>{humanizeMath(part).replace(/(^|\s)\*+(?=\s|$)/g, "$1")}</React.Fragment>;
   });
 }
 
 export default function RichStudyText({ text, className = "" }) {
-  const lines = String(text || "").split(/\r?\n/);
+  const normalized = String(text || "").replace(/\$\$([\s\S]*?)\$\$/g, (_, equation) => `$$${equation.replace(/\r?\n/g, " ")}$$`)
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, equation) => `\\[${equation.replace(/\r?\n/g, " ")}\\]`);
+  const lines = normalized.split(/\r?\n/);
+  const consumed = new Set();
   return <article className={`study-rich-text space-y-3 text-[15px] leading-7 text-slate-700 ${className}`}>
     {lines.map((line, index) => {
+      if (consumed.has(index)) return null;
       const clean = line.trim();
+      if (/^#{1,6}\s+(?:Sources for this section|Source references|Sources|Citations)\s*$/i.test(clean)) {
+        const references = [];
+        for (let row = index + 1; row < lines.length && !/^\s*(?:#{1,6}\s|---+)/.test(lines[row]); row++) {
+          consumed.add(row);
+          if (lines[row].trim()) references.push(lines[row].trim().replace(/^[-*•]\s+/, ""));
+        }
+        return <details key={index} className="text-[11px] leading-4 text-slate-400"><summary className="cursor-pointer hover:text-slate-600">Sources ({references.length})</summary><div className="mt-1 space-y-0.5">{references.map((reference, number) => <p key={number} className="truncate" title={reference}>{reference}</p>)}</div></details>;
+      }
+      if (clean.startsWith("|") && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[index + 1] || "")) {
+        consumed.add(index + 1);
+        const cells = value => value.trim().replace(/^\||\|$/g, "").split("|").map(cell => cell.trim());
+        const rows = [];
+        for (let row = index + 2; row < lines.length && lines[row].trim().startsWith("|"); row++) { rows.push(cells(lines[row])); consumed.add(row); }
+        return <div key={index} className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full text-left text-sm"><thead className="bg-lilac/50"><tr>{cells(clean).map((cell, column) => <th key={column} className="border-b border-slate-200 px-4 py-2"><Inline text={cell}/></th>)}</tr></thead><tbody>{rows.map((row, number) => <tr key={number}>{row.map((cell, column) => <td key={column} className="border-b border-slate-100 px-4 py-2"><Inline text={cell}/></td>)}</tr>)}</tbody></table></div>;
+      }
       if (!clean) return <div key={index} className="h-1"/>;
       if (/^\*\*[^*]+\*\*:?$/.test(clean)) return <h4 key={index} className="mt-5 border-b border-lavender/60 pb-2 text-base font-extrabold text-slate-800"><Inline text={clean.replace(/^\*\*|\*\*:?$/g, "")}/></h4>;
       if (/^###\s/.test(clean)) return <h4 key={index} className="mt-5 border-b border-lavender/60 pb-2 text-base font-extrabold text-slate-800"><Inline text={clean.replace(/^###\s+/, "")}/></h4>;

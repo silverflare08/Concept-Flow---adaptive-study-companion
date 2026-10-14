@@ -7,8 +7,11 @@ from uuid import uuid4
 from studybuddy.cancellation import check_cancelled
 
 def cache_path(namespace: str, identity: object) -> Path:
+    from studybuddy.account_context import account_context
     digest = hashlib.sha256(json.dumps(identity, sort_keys=True, default=str).encode()).hexdigest()
-    return Path(os.getenv('CONCEPTFLOW_CACHE_DIR', 'data/cache')) / namespace / f'{digest}.json'
+    context = account_context.get()
+    root = context["cache_root"] if context is not None else Path(os.getenv('CONCEPTFLOW_CACHE_DIR', 'data/cache'))
+    return root / namespace / f'{digest}.json'
 
 def read_cached(path: Path) -> str | None:
     check_cancelled()

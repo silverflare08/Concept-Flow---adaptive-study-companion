@@ -9,10 +9,10 @@ export function SourceReferences({ evidence = [], api = "", compact = false }) {
     const location = source.page ? `PDF page ${source.page}` : source.slide ? `Slide ${source.slide}` : source.start_seconds != null ? `Timestamp ${timestamp}` : source.section || source.label;
     const href = source.target_uri?.startsWith("/") ? `${api}${source.target_uri}` : source.target_uri;
     const openLabel = source.page ? `Open PDF at page ${source.page}` : source.slide ? `Download slides · go to slide ${source.slide}` : source.start_seconds != null ? `Open at ${timestamp}` : "Open original source";
-    return <div key={`${source.label}-${index}`} className={`rounded-xl bg-sky/35 ${compact ? "p-2 text-xs" : "p-3 text-sm"}`}>
-      <p className="flex items-start gap-2 font-semibold text-slate-700"><FileText size={compact ? 14 : 16} className="mt-0.5 shrink-0"/><span>{location}{source.source_name ? ` in ${source.source_name}` : ""}</span></p>
-      {!compact && source.excerpt && <blockquote className="mt-2 leading-6 text-slate-600">“{source.excerpt}”</blockquote>}
-      {href && <a href={href} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold text-plum underline underline-offset-4">{openLabel}<ArrowRight size={14}/></a>}
+    return <div key={`${source.label}-${index}`} className="rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-1.5 text-[11px] leading-4 text-slate-500">
+      <div className="flex min-w-0 items-center gap-1.5"><FileText size={12} className="shrink-0"/><span className="min-w-0 flex-1 truncate" title={source.label || `${location} in ${source.source_name}`}>{location}{source.source_name ? ` · ${source.source_name}` : ""}</span>
+      {href && <a href={href} target="_blank" rel="noreferrer" title={openLabel} aria-label={openLabel} className="inline-flex shrink-0 items-center gap-1 text-slate-500 underline underline-offset-2 hover:text-plum">Open<ArrowRight size={11}/></a>}</div>
+      {source.excerpt && <details className="mt-1"><summary className="cursor-pointer text-[10px] text-slate-400 hover:text-slate-600">View cited excerpt</summary><blockquote className="mt-1 text-[11px] leading-4 text-slate-500">“{source.excerpt}”</blockquote></details>}
     </div>;
   })}</div>;
 }

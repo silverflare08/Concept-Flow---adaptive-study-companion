@@ -35,3 +35,9 @@ def test_rejects_invalid_chunk_configuration() -> None:
         assert "overlap" in str(error)
     else:
         raise AssertionError("invalid overlap must fail")
+
+
+def test_equations_tables_and_reading_order_keep_line_breaks():
+    text = "PMF definition\np_X(a) = P(X = a)\n\n| x | p(x) |\n| 0 | 0.5 |"
+    segment = SourceSegment(text=text, citation=CitationAnchor(source_id="math", source_name="Math", source_type=SourceType.PDF, page=2))
+    assert chunk_segments([segment])[0].text == text

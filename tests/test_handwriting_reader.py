@@ -52,3 +52,7 @@ def test_repetition_loop_is_retried_and_never_cached(monkeypatch, tmp_path):
     assert len(attempts) == 2
     assert images.describe_study_image(photo) == 'BFS uses a queue.'
     assert len(attempts) == 2
+
+def test_handwriting_quality_catches_repetition_inside_one_long_line():
+    from studybuddy.ingestion.images import usable_transcription
+    assert not usable_transcription("The label For NB is written below the diagram. " * 100)

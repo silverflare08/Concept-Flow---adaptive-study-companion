@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Headphones, Play, Sparkles, Square, Video, Volum
 import { SourceReferences } from "./StudyViews.jsx";
 import WorkingState from "./WorkingState.jsx";
 import RichStudyText from "./RichStudyText.jsx";
+import LessonNotice from "./LessonNotice.jsx";
 
 function cleanSpeech(text) {
   return text.replace(/[#*_>`]/g, " ").replace(/\s+/g, " ").trim();
@@ -85,7 +86,7 @@ export default function StudyMediaPage({ api, workspace, requestedSourceId, requ
     {error && <div className="rounded-2xl bg-peach p-4 text-sm text-slate-700">{error}</div>}
     {lesson && mode === "audio" && <section className="glass-card p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Audio lesson</p><h2 className="mt-1 text-xl font-bold">{selectedName}</h2></div><button onClick={playing ? stopSpeech : playAudio} className="primary-button">{playing ? <Square size={16}/> : <Volume2 size={17}/>} {playing ? "Stop" : "Play explanation"}</button></div><div className="mt-5 max-h-96 overflow-y-auto"><RichStudyText text={lesson.answer}/></div></section>}
     {lesson && mode === "video" && slides.length > 0 && <section className="space-y-4"><div className="aspect-video overflow-hidden rounded-3xl bg-gradient-to-br from-[#574681] via-[#7665a7] to-[#9bc9b8] p-5 shadow-xl sm:p-10"><div className="flex h-full flex-col rounded-2xl bg-white/95 p-6 sm:p-9"><div className="flex items-center justify-between"><span className="rounded-full bg-lilac px-3 py-1 text-xs font-bold text-plum">{slide + 1} / {slides.length}</span><span className="text-xs font-semibold text-slate-400">{selectedName}</span></div><div className="my-auto"><h2 className="text-xl font-extrabold text-slate-800 sm:text-3xl">{slides[slide].title}</h2><p className="mt-4 max-h-48 overflow-y-auto whitespace-pre-wrap text-xs leading-6 text-slate-600 sm:text-sm">{slides[slide].body}</p></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-plum transition-all" style={{ width: `${(slide + 1) / slides.length * 100}%` }}/></div></div></div><div className="flex flex-wrap items-center justify-center gap-2"><button disabled={slide === 0} onClick={() => { stopSpeech(); setSlide(value => value - 1); }} className="secondary-button disabled:opacity-40"><ArrowLeft size={16}/>Previous</button><button onClick={playing ? stopSpeech : () => playSlides(slide)} className="primary-button">{playing ? <Square size={16}/> : <Play size={16}/>} {playing ? "Stop narration" : "Play narrated lesson"}</button><button disabled={slide === slides.length - 1} onClick={() => { stopSpeech(); setSlide(value => value + 1); }} className="secondary-button disabled:opacity-40">Next<ArrowRight size={16}/></button></div></section>}
-    {lesson?.generation_mode === "extractive_fallback" && <div className="rounded-2xl bg-peach p-4 text-sm text-slate-700">Ollama was unavailable, so this media lesson uses cited source excerpts. It remains grounded, but an Ollama-generated version will provide smoother explanations.</div>}
+    <LessonNotice lesson={lesson}/>
     {lesson?.citations?.length > 0 && <section className="glass-card p-5"><h2 className="font-bold">Lesson sources</h2><div className="mt-3"><SourceReferences evidence={lesson.citations} api={api} compact/></div></section>}
   </div>;
 }

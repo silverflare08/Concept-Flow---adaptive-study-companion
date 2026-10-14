@@ -17,8 +17,10 @@ from urllib.request import Request, urlopen
 from .models import CitationAnchor, EvidenceKind, SourceSegment, SourceType
 
 def usable_transcription(value: str) -> bool:
+    from studybuddy.text_quality import has_runaway_repetition
     lines = [line.strip() for line in value.splitlines() if line.strip()]
-    return bool(lines) and (len(lines) < 20 or len(set(lines)) / len(lines) > 0.25)
+    return (bool(lines) and not has_runaway_repetition(value)
+            and (len(lines) < 20 or len(set(lines)) / len(lines) > 0.25))
 
 
 def prepare_vision_image(path: str | Path) -> bytes:
@@ -49,8 +51,11 @@ def describe_study_image(path: str | Path) -> str:
         "diagrams, equations, charts, labels and arrows. Preserve reading order, headings, "
         "numbers and mathematical symbols. Mark unclear handwriting as [unclear]; do not "
         "guess missing words or invent solutions. Do not add facts."
+        " Put each equation on its own line. Keep table rows separate. "
+        "Copy subscripts, superscripts, set braces and Greek letters exactly; never replace "
+        "an unreadable symbol with a guessed letter or digit. Use [unclear symbol] where needed."
     )
-    cached_path = cache_path('vision', {'version': 2, 'model': model, 'endpoint': endpoint,
+    cached_path = cache_path('vision', {'version': 3, 'model': model, 'endpoint': endpoint,
                                       'prompt': prompt, 'image': hashlib.sha256(prepared).hexdigest()})
     cached = read_cached(cached_path)
     if cached is not None and usable_transcription(cached):
