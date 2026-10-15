@@ -204,7 +204,6 @@ class OverviewRequest(BaseModel):
 
 
 class AssessmentCreateRequest(BaseModel):
-    allow_source_recall: bool = False
     scope: list[str] = Field(default_factory=list, max_length=12)
     source_ids: list[str] = Field(default_factory=list, max_length=100)
     question_count: int = Field(default=5, ge=1, le=12)
@@ -1048,14 +1047,12 @@ def create_assessment(request: AssessmentCreateRequest) -> dict[str, object]:
             verify_json=call_ollama_json,
             language=request.language,
             generation_status=generation_status,
-            allow_source_recall=request.allow_source_recall,
         )
         assessment_id = repository.save_assessment(
             workspace.course_id,
             draft,
             config={
                 **request.model_dump(),
-                "question_validation_version": 2,
                 "adaptive_scope": adaptive_scope,
                 **generation_status,
             },

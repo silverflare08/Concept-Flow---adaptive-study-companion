@@ -136,16 +136,6 @@ On macOS/Linux, use `python3.11` if needed. On Windows, if your global Python co
 
 English is the default explanation language. Hindi and Romanised Hinglish are labelled **Experimental** in the language selector and profile settings. Output quality varies with the material and local model; source excerpts and transcripts retain their original language. Use English if a requested language cannot be generated reliably.
 
-### Practice quality and limitations
-
-Ordinary assessments do not silently fill missing questions with copied source passages. Drafts are checked by a blind source-based solver that does not receive their proposed answer keys or explanations. Accepted solutions require an exact supporting source excerpt and a matching difficulty classification. Numeric answers require a restricted, independently evaluated arithmetic expression; contradictory worked calculations, label-only MCQ options and unsupported candidates are rejected.
-
-For numerical-format questions, a valid source-supported expression using only supplied input values can repair the draft's arithmetic answer and worked numeric step. This is arithmetic validation, not a proof that the model selected the right physical or mathematical rule; source review remains necessary.
-
-These are safeguards, not a guarantee of correctness: drafting and semantic verification may still use the same model. If too few candidates pass, the app reports a partial paper or an error rather than inventing a complete exam. **Rapid recall** explicitly permits labelled easy source-recall exercises. Recall is not a substitute for medium/hard application or reasoning tasks. Previously saved papers are not automatically revalidated by the new checks.
-
-To use a higher-capacity model for assessments without changing the faster tutoring model, run `ollama pull qwen2.5:7b-instruct`, set `OLLAMA_ASSESSMENT_MODEL=qwen2.5:7b-instruct` in `.env`, and restart the app. This override covers question drafting, blind solving and assessment feedback; guides and ordinary tutoring keep `OLLAMA_MODEL`. The larger model needs more memory and is not guaranteed to be faster or correct. Live checks still require source review.
-
 ## Configuration
 
 Defaults work without a configuration file. Copy [.env.example](.env.example) to `.env` only if you need overrides, then restart the server. Never commit credentials.
