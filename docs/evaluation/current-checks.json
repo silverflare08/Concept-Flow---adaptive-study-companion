@@ -1,0 +1,54 @@
+{
+  "run_started_utc": "2026-10-15T03:24:16.473002+00:00",
+  "git_head": "d094f1147649dad9d2f4ee5acb13b92a61d90415",
+  "python": "3.14.2",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "node": "v24.18.0",
+  "scope": "Existing checkout and installed dependencies, not a fresh clone or clean installation.",
+  "checks": [
+    {
+      "name": "backend-tests",
+      "command": [
+        "C:\\Users\\PALAKM\\Downloads\\polyglot-shorthand2\\studybuddy\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "--basetemp=.pytest_cache/report-evidence-recorded"
+      ],
+      "exit_code": 0,
+      "log": "docs/evaluation/backend-tests.txt"
+    },
+    {
+      "name": "frontend-tests",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.CMD",
+        "--prefix",
+        "web",
+        "test"
+      ],
+      "exit_code": 0,
+      "log": "docs/evaluation/frontend-tests.txt"
+    },
+    {
+      "name": "frontend-build",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.CMD",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "log": "docs/evaluation/frontend-build.txt"
+    },
+    {
+      "name": "benchmark-run",
+      "command": [
+        "C:\\Users\\PALAKM\\Downloads\\polyglot-shorthand2\\studybuddy\\.venv\\Scripts\\python.exe",
+        "benchmark_report.py"
+      ],
+      "exit_code": 0,
+      "log": "docs/evaluation/benchmark-run.txt"
+    }
+  ]
+}

@@ -115,7 +115,7 @@ python scripts/setup.py
 python scripts/start.py
 ```
 
-`setup.py` installs project dependencies, downloads the models and validates the environment. Tested on Windows with Python 3.11.9 and Node.js 24.18.0.
+`setup.py` installs project dependencies, downloads the models and validates the environment. Python 3.11 is the recommended setup version. The current recorded verification used Windows, Python 3.14.2, pytest 9.1.1 and Node.js 24.18.0; this does not establish that every supported device or Python version has been tested. See [Summary of Results](docs/evaluation/summary.md) for raw logs, commands and limitations.
 
 ### Running the application
 

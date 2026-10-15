@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-15",
+  "material": "samples/graph-basics.md",
+  "indexed_passages": 15,
+  "scope": "Custom retrieval metrics and fixed-ability simulation; no generated-answer faithfulness, RAGAS scores or real learning gains are measured.",
+  "provenance": {
+    "python": "3.14.2",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "source_sha256": "350898cd32f9f4d744bf9e199d4f1edc5ebb065c4e9b15c66dcc462108e08712",
+    "script_sha256": "6a02a705cc06347e70afa75a7f439823eecd4b488238b8b3fec442b38487b23a",
+    "pydantic": "2.13.5",
+    "seed_range": [
+      0,
+      29
+    ],
+    "answer_events": 9000,
+    "uses_live_llm": false,
+    "session_boundary_note": "Ten sessions are ten consecutive blocks of five answers; no time gaps or forgetting are simulated."
+  }
+}
+Saved all per-question and per-seed results to C:\Users\PALAKM\Downloads\polyglot-shorthand2\studybuddy\benchmark-results.json

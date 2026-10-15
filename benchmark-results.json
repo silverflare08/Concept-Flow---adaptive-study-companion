@@ -1,0 +1,1772 @@
+{
+  "date": "2026-10-15",
+  "material": "samples/graph-basics.md",
+  "indexed_passages": 15,
+  "retrieval": {
+    "questions": 12,
+    "hit_at_1": 0.75,
+    "hit_at_3": 1,
+    "precision_at_3": 0.41666666666666663,
+    "recall_at_3": 0.9722222222222222,
+    "zero_overlap_queries": 4,
+    "empty_retrieval_count": 4,
+    "cases": [
+      {
+        "query": "Which data structure does BFS use?",
+        "reference_locations": [
+          "paragraph 13",
+          "paragraph 15",
+          "paragraph 7"
+        ],
+        "retrieved_locations": [
+          "paragraph 15",
+          "paragraph 9",
+          "paragraph 7"
+        ],
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "precision_at_3": 0.6666666666666666,
+        "recall_at_3": 0.6666666666666666
+      },
+      {
+        "query": "Which data structure does DFS use?",
+        "reference_locations": [
+          "paragraph 13"
+        ],
+        "retrieved_locations": [
+          "paragraph 15",
+          "paragraph 13",
+          "paragraph 9"
+        ],
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "How does depth-first search explore branches?",
+        "reference_locations": [
+          "paragraph 13"
+        ],
+        "retrieved_locations": [
+          "paragraph 12",
+          "paragraph 13",
+          "paragraph 6"
+        ],
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What are graph vertices and edges?",
+        "reference_locations": [
+          "paragraph 4"
+        ],
+        "retrieved_locations": [
+          "paragraph 5",
+          "paragraph 4",
+          "paragraph 15"
+        ],
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "How does an adjacency list store neighbours?",
+        "reference_locations": [
+          "paragraph 4"
+        ],
+        "retrieved_locations": [
+          "paragraph 4",
+          "paragraph 9",
+          "paragraph 5"
+        ],
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is the space requirement of an adjacency matrix?",
+        "reference_locations": [
+          "paragraph 5"
+        ],
+        "retrieved_locations": [
+          "paragraph 5",
+          "paragraph 4",
+          "paragraph 15"
+        ],
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is a sparse graph?",
+        "reference_locations": [
+          "paragraph 5"
+        ],
+        "retrieved_locations": [
+          "paragraph 5",
+          "paragraph 15",
+          "paragraph 3"
+        ],
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is BFS time complexity with an adjacency list?",
+        "reference_locations": [
+          "paragraph 15",
+          "paragraph 9"
+        ],
+        "retrieved_locations": [
+          "paragraph 15",
+          "paragraph 9",
+          "paragraph 5"
+        ],
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "precision_at_3": 0.6666666666666666,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "Does BFS find shortest paths in an unweighted graph?",
+        "reference_locations": [
+          "paragraph 9"
+        ],
+        "retrieved_locations": [
+          "paragraph 9",
+          "paragraph 15",
+          "paragraph 4"
+        ],
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "Does BFS find a minimum-weight path in a weighted graph?",
+        "reference_locations": [
+          "paragraph 9"
+        ],
+        "retrieved_locations": [
+          "paragraph 9",
+          "paragraph 15",
+          "paragraph 4"
+        ],
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is the BFS order starting at A in the worked example?",
+        "reference_locations": [
+          "paragraph 11"
+        ],
+        "retrieved_locations": [
+          "paragraph 11",
+          "paragraph 15",
+          "paragraph 10"
+        ],
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is the distance from A to D in the example?",
+        "reference_locations": [
+          "paragraph 11",
+          "paragraph 15"
+        ],
+        "retrieved_locations": [
+          "paragraph 15",
+          "paragraph 11",
+          "paragraph 8"
+        ],
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "precision_at_3": 0.6666666666666666,
+        "recall_at_3": 1.0
+      }
+    ]
+  },
+  "simulation": {
+    "profiles": {
+      "Novice": [
+        0.25,
+        0.3,
+        0.35
+      ],
+      "Intermediate": [
+        0.55,
+        0.65,
+        0.75
+      ],
+      "Uneven": [
+        0.1,
+        0.85,
+        0.8
+      ]
+    },
+    "parameters": {
+      "prior": 0.2,
+      "learn": 0.15,
+      "guess": 0.2,
+      "slip": 0.1
+    },
+    "question_pool_sizes": {
+      "Graph representations": 83,
+      "BFS": 145,
+      "DFS": 36
+    },
+    "fixed_ability": true,
+    "results": [
+      {
+        "profile": "Novice",
+        "policy": "adaptive",
+        "seeds": 30,
+        "sessions_per_run": 10,
+        "questions_per_session": 5,
+        "mean_correct_rate": 0.41733333333333333,
+        "mean_final_mastery": 0.8106687405475707,
+        "mean_estimated_mastery_change": 0.6106687405475707,
+        "mean_repetition_rate": 0.003333333333333333,
+        "mean_weakest_topic_selection_rate": 1.0,
+        "runs": [
+          {
+            "seed": 0,
+            "correct_rate": 0.3,
+            "final_mean_mastery": 0.7094957215703057,
+            "estimated_mastery_change": 0.5094957215703058,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 1,
+            "correct_rate": 0.46,
+            "final_mean_mastery": 0.7258389173393552,
+            "estimated_mastery_change": 0.5258389173393552,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 2,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.7082409776339231,
+            "estimated_mastery_change": 0.5082409776339232,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 3,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.7108384397944747,
+            "estimated_mastery_change": 0.5108384397944747,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 4,
+            "correct_rate": 0.44,
+            "final_mean_mastery": 0.9481714515356162,
+            "estimated_mastery_change": 0.7481714515356161,
+            "repetition_rate": 0.06,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 5,
+            "correct_rate": 0.42,
+            "final_mean_mastery": 0.9648766147034293,
+            "estimated_mastery_change": 0.7648766147034294,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 6,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.8703441853442212,
+            "estimated_mastery_change": 0.6703441853442211,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 7,
+            "correct_rate": 0.5,
+            "final_mean_mastery": 0.8448281657035687,
+            "estimated_mastery_change": 0.6448281657035686,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 8,
+            "correct_rate": 0.44,
+            "final_mean_mastery": 0.8260570354803374,
+            "estimated_mastery_change": 0.6260570354803374,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 9,
+            "correct_rate": 0.48,
+            "final_mean_mastery": 0.9716090577841953,
+            "estimated_mastery_change": 0.7716090577841952,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 10,
+            "correct_rate": 0.38,
+            "final_mean_mastery": 0.8383164939182999,
+            "estimated_mastery_change": 0.6383164939182999,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 11,
+            "correct_rate": 0.32,
+            "final_mean_mastery": 0.7133823011630701,
+            "estimated_mastery_change": 0.51338230116307,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 12,
+            "correct_rate": 0.48,
+            "final_mean_mastery": 0.7177346945086404,
+            "estimated_mastery_change": 0.5177346945086403,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 13,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.8347150001059596,
+            "estimated_mastery_change": 0.6347150001059596,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 14,
+            "correct_rate": 0.46,
+            "final_mean_mastery": 0.8871177211159021,
+            "estimated_mastery_change": 0.6871177211159021,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 15,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.7532436028164164,
+            "estimated_mastery_change": 0.5532436028164165,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 16,
+            "correct_rate": 0.44,
+            "final_mean_mastery": 0.7086630850691896,
+            "estimated_mastery_change": 0.5086630850691896,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 17,
+            "correct_rate": 0.38,
+            "final_mean_mastery": 0.6817729633463083,
+            "estimated_mastery_change": 0.4817729633463083,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 18,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.7425695444616727,
+            "estimated_mastery_change": 0.5425695444616727,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 19,
+            "correct_rate": 0.5,
+            "final_mean_mastery": 0.8620340434758531,
+            "estimated_mastery_change": 0.6620340434758532,
+            "repetition_rate": 0.04,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 20,
+            "correct_rate": 0.46,
+            "final_mean_mastery": 0.8636568481523162,
+            "estimated_mastery_change": 0.6636568481523162,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 21,
+            "correct_rate": 0.42,
+            "final_mean_mastery": 0.736938168876864,
+            "estimated_mastery_change": 0.536938168876864,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 22,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.7836267860989834,
+            "estimated_mastery_change": 0.5836267860989834,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 23,
+            "correct_rate": 0.5,
+            "final_mean_mastery": 0.9942549730651422,
+            "estimated_mastery_change": 0.7942549730651423,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 24,
+            "correct_rate": 0.38,
+            "final_mean_mastery": 0.7189106458603429,
+            "estimated_mastery_change": 0.518910645860343,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 25,
+            "correct_rate": 0.44,
+            "final_mean_mastery": 0.9584245205370504,
+            "estimated_mastery_change": 0.7584245205370503,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 26,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.717025163976758,
+            "estimated_mastery_change": 0.517025163976758,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 27,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.9219067895640495,
+            "estimated_mastery_change": 0.7219067895640494,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 28,
+            "correct_rate": 0.54,
+            "final_mean_mastery": 0.8467383081824963,
+            "estimated_mastery_change": 0.6467383081824962,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 29,
+            "correct_rate": 0.44,
+            "final_mean_mastery": 0.7587299952423776,
+            "estimated_mastery_change": 0.5587299952423777,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          }
+        ]
+      },
+      {
+        "profile": "Novice",
+        "policy": "round_robin",
+        "seeds": 30,
+        "sessions_per_run": 10,
+        "questions_per_session": 5,
+        "mean_correct_rate": 0.41333333333333333,
+        "mean_final_mastery": 0.5977041648664202,
+        "mean_estimated_mastery_change": 0.3977041648664202,
+        "mean_repetition_rate": 0.0,
+        "mean_weakest_topic_selection_rate": 0.324,
+        "runs": [
+          {
+            "seed": 0,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.6350528959285338,
+            "estimated_mastery_change": 0.43505289592853374,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 1,
+            "correct_rate": 0.44,
+            "final_mean_mastery": 0.5009815528975079,
+            "estimated_mastery_change": 0.3009815528975079,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 2,
+            "correct_rate": 0.32,
+            "final_mean_mastery": 0.29736506590534545,
+            "estimated_mastery_change": 0.09736506590534544,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.26
+          },
+          {
+            "seed": 3,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.37727545799038104,
+            "estimated_mastery_change": 0.17727545799038102,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.38
+          },
+          {
+            "seed": 4,
+            "correct_rate": 0.44,
+            "final_mean_mastery": 0.6793050614875492,
+            "estimated_mastery_change": 0.4793050614875492,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.38
+          },
+          {
+            "seed": 5,
+            "correct_rate": 0.42,
+            "final_mean_mastery": 0.8354280793313013,
+            "estimated_mastery_change": 0.6354280793313012,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 6,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.5822527806067129,
+            "estimated_mastery_change": 0.3822527806067129,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 7,
+            "correct_rate": 0.5,
+            "final_mean_mastery": 0.6153264027572893,
+            "estimated_mastery_change": 0.4153264027572893,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.38
+          },
+          {
+            "seed": 8,
+            "correct_rate": 0.46,
+            "final_mean_mastery": 0.6597431300754434,
+            "estimated_mastery_change": 0.4597431300754434,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.28
+          },
+          {
+            "seed": 9,
+            "correct_rate": 0.5,
+            "final_mean_mastery": 0.7883827076033612,
+            "estimated_mastery_change": 0.5883827076033612,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.36
+          },
+          {
+            "seed": 10,
+            "correct_rate": 0.38,
+            "final_mean_mastery": 0.456448873823193,
+            "estimated_mastery_change": 0.256448873823193,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.36
+          },
+          {
+            "seed": 11,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.43142804196999424,
+            "estimated_mastery_change": 0.23142804196999422,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 12,
+            "correct_rate": 0.44,
+            "final_mean_mastery": 0.6344026839791093,
+            "estimated_mastery_change": 0.43440268397910925,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 13,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.53494377510492,
+            "estimated_mastery_change": 0.33494377510491996,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.42
+          },
+          {
+            "seed": 14,
+            "correct_rate": 0.46,
+            "final_mean_mastery": 0.6126690161861753,
+            "estimated_mastery_change": 0.4126690161861753,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 15,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.6493035170786475,
+            "estimated_mastery_change": 0.4493035170786475,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.26
+          },
+          {
+            "seed": 16,
+            "correct_rate": 0.48,
+            "final_mean_mastery": 0.6413260801544561,
+            "estimated_mastery_change": 0.4413260801544561,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.24
+          },
+          {
+            "seed": 17,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.45702727226664197,
+            "estimated_mastery_change": 0.25702727226664196,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.44
+          },
+          {
+            "seed": 18,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.5627107108897919,
+            "estimated_mastery_change": 0.36271071088979184,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.38
+          },
+          {
+            "seed": 19,
+            "correct_rate": 0.48,
+            "final_mean_mastery": 0.7109479778242526,
+            "estimated_mastery_change": 0.5109479778242525,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 20,
+            "correct_rate": 0.44,
+            "final_mean_mastery": 0.628069172161499,
+            "estimated_mastery_change": 0.42806917216149903,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.22
+          },
+          {
+            "seed": 21,
+            "correct_rate": 0.42,
+            "final_mean_mastery": 0.5888449084965874,
+            "estimated_mastery_change": 0.3888449084965874,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 22,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.5664417530797856,
+            "estimated_mastery_change": 0.3664417530797856,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 23,
+            "correct_rate": 0.46,
+            "final_mean_mastery": 0.9229296083912597,
+            "estimated_mastery_change": 0.7229296083912597,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.42
+          },
+          {
+            "seed": 24,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.4801047455844798,
+            "estimated_mastery_change": 0.2801047455844798,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.22
+          },
+          {
+            "seed": 25,
+            "correct_rate": 0.38,
+            "final_mean_mastery": 0.61414990174039,
+            "estimated_mastery_change": 0.41414990174038996,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.28
+          },
+          {
+            "seed": 26,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.5856716694935934,
+            "estimated_mastery_change": 0.3856716694935934,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 27,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.6336786198417454,
+            "estimated_mastery_change": 0.43367861984174544,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.4
+          },
+          {
+            "seed": 28,
+            "correct_rate": 0.56,
+            "final_mean_mastery": 0.7746364550597401,
+            "estimated_mastery_change": 0.57463645505974,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 29,
+            "correct_rate": 0.38,
+            "final_mean_mastery": 0.47427702828291896,
+            "estimated_mastery_change": 0.27427702828291894,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.16
+          }
+        ]
+      },
+      {
+        "profile": "Intermediate",
+        "policy": "adaptive",
+        "seeds": 30,
+        "sessions_per_run": 10,
+        "questions_per_session": 5,
+        "mean_correct_rate": 0.6366666666666667,
+        "mean_final_mastery": 0.9861240083876904,
+        "mean_estimated_mastery_change": 0.7861240083876905,
+        "mean_repetition_rate": 0.0,
+        "mean_weakest_topic_selection_rate": 1.0,
+        "runs": [
+          {
+            "seed": 0,
+            "correct_rate": 0.54,
+            "final_mean_mastery": 0.9738362104373155,
+            "estimated_mastery_change": 0.7738362104373155,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 1,
+            "correct_rate": 0.66,
+            "final_mean_mastery": 0.9642616819036786,
+            "estimated_mastery_change": 0.7642616819036785,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 2,
+            "correct_rate": 0.54,
+            "final_mean_mastery": 0.9612713141433019,
+            "estimated_mastery_change": 0.7612713141433018,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 3,
+            "correct_rate": 0.6,
+            "final_mean_mastery": 0.9977825356505478,
+            "estimated_mastery_change": 0.7977825356505477,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 4,
+            "correct_rate": 0.68,
+            "final_mean_mastery": 0.9999070663683245,
+            "estimated_mastery_change": 0.7999070663683245,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 5,
+            "correct_rate": 0.6,
+            "final_mean_mastery": 0.9986300602860556,
+            "estimated_mastery_change": 0.7986300602860557,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 6,
+            "correct_rate": 0.54,
+            "final_mean_mastery": 0.9507128654098618,
+            "estimated_mastery_change": 0.7507128654098618,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 7,
+            "correct_rate": 0.82,
+            "final_mean_mastery": 0.9999998011417063,
+            "estimated_mastery_change": 0.7999998011417062,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 8,
+            "correct_rate": 0.68,
+            "final_mean_mastery": 0.999847579473482,
+            "estimated_mastery_change": 0.7998475794734821,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 9,
+            "correct_rate": 0.7,
+            "final_mean_mastery": 0.9999450329426003,
+            "estimated_mastery_change": 0.7999450329426003,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 10,
+            "correct_rate": 0.62,
+            "final_mean_mastery": 0.9990283777820097,
+            "estimated_mastery_change": 0.7990283777820097,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 11,
+            "correct_rate": 0.68,
+            "final_mean_mastery": 0.9952948338617713,
+            "estimated_mastery_change": 0.7952948338617714,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 12,
+            "correct_rate": 0.62,
+            "final_mean_mastery": 0.8619278077021065,
+            "estimated_mastery_change": 0.6619278077021065,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 13,
+            "correct_rate": 0.62,
+            "final_mean_mastery": 0.9996959786800632,
+            "estimated_mastery_change": 0.7996959786800633,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 14,
+            "correct_rate": 0.58,
+            "final_mean_mastery": 0.995966731395873,
+            "estimated_mastery_change": 0.7959667313958729,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 15,
+            "correct_rate": 0.58,
+            "final_mean_mastery": 0.9973798775251153,
+            "estimated_mastery_change": 0.7973798775251153,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 16,
+            "correct_rate": 0.66,
+            "final_mean_mastery": 0.9996807762553248,
+            "estimated_mastery_change": 0.7996807762553249,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 17,
+            "correct_rate": 0.52,
+            "final_mean_mastery": 0.917194324371613,
+            "estimated_mastery_change": 0.717194324371613,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 18,
+            "correct_rate": 0.7,
+            "final_mean_mastery": 0.9998158796297884,
+            "estimated_mastery_change": 0.7998158796297883,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 19,
+            "correct_rate": 0.7,
+            "final_mean_mastery": 0.9999796022321814,
+            "estimated_mastery_change": 0.7999796022321815,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 20,
+            "correct_rate": 0.72,
+            "final_mean_mastery": 0.9999990350633321,
+            "estimated_mastery_change": 0.7999990350633321,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 21,
+            "correct_rate": 0.66,
+            "final_mean_mastery": 0.9928576248749621,
+            "estimated_mastery_change": 0.7928576248749621,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 22,
+            "correct_rate": 0.52,
+            "final_mean_mastery": 0.9907650286906196,
+            "estimated_mastery_change": 0.7907650286906196,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 23,
+            "correct_rate": 0.74,
+            "final_mean_mastery": 0.9999970707723389,
+            "estimated_mastery_change": 0.799997070772339,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 24,
+            "correct_rate": 0.52,
+            "final_mean_mastery": 0.9958874058496511,
+            "estimated_mastery_change": 0.795887405849651,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 25,
+            "correct_rate": 0.72,
+            "final_mean_mastery": 0.9999979103559282,
+            "estimated_mastery_change": 0.7999979103559283,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 26,
+            "correct_rate": 0.56,
+            "final_mean_mastery": 0.9974937498790633,
+            "estimated_mastery_change": 0.7974937498790633,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 27,
+            "correct_rate": 0.62,
+            "final_mean_mastery": 0.9985440654921339,
+            "estimated_mastery_change": 0.7985440654921339,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 28,
+            "correct_rate": 0.68,
+            "final_mean_mastery": 0.9961023523945893,
+            "estimated_mastery_change": 0.7961023523945894,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 29,
+            "correct_rate": 0.72,
+            "final_mean_mastery": 0.9999176710653745,
+            "estimated_mastery_change": 0.7999176710653746,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          }
+        ]
+      },
+      {
+        "profile": "Intermediate",
+        "policy": "round_robin",
+        "seeds": 30,
+        "sessions_per_run": 10,
+        "questions_per_session": 5,
+        "mean_correct_rate": 0.6433333333333333,
+        "mean_final_mastery": 0.9331203629419657,
+        "mean_estimated_mastery_change": 0.7331203629419656,
+        "mean_repetition_rate": 0.0,
+        "mean_weakest_topic_selection_rate": 0.3606666666666667,
+        "runs": [
+          {
+            "seed": 0,
+            "correct_rate": 0.56,
+            "final_mean_mastery": 0.8514483608146893,
+            "estimated_mastery_change": 0.6514483608146893,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 1,
+            "correct_rate": 0.66,
+            "final_mean_mastery": 0.9959519443004872,
+            "estimated_mastery_change": 0.7959519443004872,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.46
+          },
+          {
+            "seed": 2,
+            "correct_rate": 0.6,
+            "final_mean_mastery": 0.866877565582202,
+            "estimated_mastery_change": 0.6668775655822019,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.26
+          },
+          {
+            "seed": 3,
+            "correct_rate": 0.64,
+            "final_mean_mastery": 0.9526847387503299,
+            "estimated_mastery_change": 0.7526847387503299,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.38
+          },
+          {
+            "seed": 4,
+            "correct_rate": 0.62,
+            "final_mean_mastery": 0.9577920517205291,
+            "estimated_mastery_change": 0.757792051720529,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.36
+          },
+          {
+            "seed": 5,
+            "correct_rate": 0.58,
+            "final_mean_mastery": 0.8922195498579942,
+            "estimated_mastery_change": 0.6922195498579942,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 6,
+            "correct_rate": 0.58,
+            "final_mean_mastery": 0.8713805801048601,
+            "estimated_mastery_change": 0.67138058010486,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 7,
+            "correct_rate": 0.76,
+            "final_mean_mastery": 0.9987696463190819,
+            "estimated_mastery_change": 0.7987696463190819,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.52
+          },
+          {
+            "seed": 8,
+            "correct_rate": 0.7,
+            "final_mean_mastery": 0.9948101844532895,
+            "estimated_mastery_change": 0.7948101844532895,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 9,
+            "correct_rate": 0.72,
+            "final_mean_mastery": 0.9779413380466394,
+            "estimated_mastery_change": 0.7779413380466393,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 10,
+            "correct_rate": 0.64,
+            "final_mean_mastery": 0.733314687110667,
+            "estimated_mastery_change": 0.5333146871106671,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.42
+          },
+          {
+            "seed": 11,
+            "correct_rate": 0.68,
+            "final_mean_mastery": 0.9987587927397787,
+            "estimated_mastery_change": 0.7987587927397788,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.38
+          },
+          {
+            "seed": 12,
+            "correct_rate": 0.66,
+            "final_mean_mastery": 0.986061065024792,
+            "estimated_mastery_change": 0.7860610650247919,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 13,
+            "correct_rate": 0.6,
+            "final_mean_mastery": 0.9751566793161658,
+            "estimated_mastery_change": 0.7751566793161657,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.44
+          },
+          {
+            "seed": 14,
+            "correct_rate": 0.64,
+            "final_mean_mastery": 0.7571733656533309,
+            "estimated_mastery_change": 0.5571733656533309,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 15,
+            "correct_rate": 0.58,
+            "final_mean_mastery": 0.9588672794833124,
+            "estimated_mastery_change": 0.7588672794833125,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 16,
+            "correct_rate": 0.68,
+            "final_mean_mastery": 0.9832459379362958,
+            "estimated_mastery_change": 0.7832459379362957,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.36
+          },
+          {
+            "seed": 17,
+            "correct_rate": 0.54,
+            "final_mean_mastery": 0.7110887729731094,
+            "estimated_mastery_change": 0.5110887729731093,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.44
+          },
+          {
+            "seed": 18,
+            "correct_rate": 0.68,
+            "final_mean_mastery": 0.9997879333644734,
+            "estimated_mastery_change": 0.7997879333644733,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 19,
+            "correct_rate": 0.7,
+            "final_mean_mastery": 0.9996198809893971,
+            "estimated_mastery_change": 0.7996198809893971,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 20,
+            "correct_rate": 0.74,
+            "final_mean_mastery": 0.9999963841331391,
+            "estimated_mastery_change": 0.799996384133139,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 21,
+            "correct_rate": 0.62,
+            "final_mean_mastery": 0.7676193824816728,
+            "estimated_mastery_change": 0.5676193824816729,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.36
+          },
+          {
+            "seed": 22,
+            "correct_rate": 0.58,
+            "final_mean_mastery": 0.9713794480717409,
+            "estimated_mastery_change": 0.7713794480717409,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 23,
+            "correct_rate": 0.74,
+            "final_mean_mastery": 0.9999668989383265,
+            "estimated_mastery_change": 0.7999668989383264,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.42
+          },
+          {
+            "seed": 24,
+            "correct_rate": 0.5,
+            "final_mean_mastery": 0.8592654568266418,
+            "estimated_mastery_change": 0.6592654568266418,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 25,
+            "correct_rate": 0.74,
+            "final_mean_mastery": 0.9989552014302372,
+            "estimated_mastery_change": 0.7989552014302372,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.4
+          },
+          {
+            "seed": 26,
+            "correct_rate": 0.56,
+            "final_mean_mastery": 0.9742332929675338,
+            "estimated_mastery_change": 0.7742332929675337,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.28
+          },
+          {
+            "seed": 27,
+            "correct_rate": 0.58,
+            "final_mean_mastery": 0.9960836202945833,
+            "estimated_mastery_change": 0.7960836202945833,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 28,
+            "correct_rate": 0.7,
+            "final_mean_mastery": 0.9642569217210393,
+            "estimated_mastery_change": 0.7642569217210393,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.38
+          },
+          {
+            "seed": 29,
+            "correct_rate": 0.72,
+            "final_mean_mastery": 0.99890392685263,
+            "estimated_mastery_change": 0.7989039268526299,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.4
+          }
+        ]
+      },
+      {
+        "profile": "Uneven",
+        "policy": "adaptive",
+        "seeds": 30,
+        "sessions_per_run": 10,
+        "questions_per_session": 5,
+        "mean_correct_rate": 0.38133333333333336,
+        "mean_final_mastery": 0.7695578722984853,
+        "mean_estimated_mastery_change": 0.5695578722984853,
+        "mean_repetition_rate": 0.0,
+        "mean_weakest_topic_selection_rate": 1.0,
+        "runs": [
+          {
+            "seed": 0,
+            "correct_rate": 0.26,
+            "final_mean_mastery": 0.7001473722790001,
+            "estimated_mastery_change": 0.5001473722790002,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 1,
+            "correct_rate": 0.42,
+            "final_mean_mastery": 0.7213145666193248,
+            "estimated_mastery_change": 0.5213145666193248,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 2,
+            "correct_rate": 0.24,
+            "final_mean_mastery": 0.6453599519767126,
+            "estimated_mastery_change": 0.4453599519767126,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 3,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.7121461117955793,
+            "estimated_mastery_change": 0.5121461117955792,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 4,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.8450561704436489,
+            "estimated_mastery_change": 0.6450561704436488,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 5,
+            "correct_rate": 0.56,
+            "final_mean_mastery": 0.9927860105972893,
+            "estimated_mastery_change": 0.7927860105972893,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 6,
+            "correct_rate": 0.26,
+            "final_mean_mastery": 0.775667461879287,
+            "estimated_mastery_change": 0.575667461879287,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 7,
+            "correct_rate": 0.38,
+            "final_mean_mastery": 0.7080493341460378,
+            "estimated_mastery_change": 0.5080493341460377,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 8,
+            "correct_rate": 0.38,
+            "final_mean_mastery": 0.7594339439295904,
+            "estimated_mastery_change": 0.5594339439295903,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 9,
+            "correct_rate": 0.5,
+            "final_mean_mastery": 0.9501257573697842,
+            "estimated_mastery_change": 0.7501257573697842,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 10,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.7916968217554644,
+            "estimated_mastery_change": 0.5916968217554643,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 11,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.7213965355049023,
+            "estimated_mastery_change": 0.5213965355049024,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 12,
+            "correct_rate": 0.44,
+            "final_mean_mastery": 0.7082941216987125,
+            "estimated_mastery_change": 0.5082941216987125,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 13,
+            "correct_rate": 0.32,
+            "final_mean_mastery": 0.7756970510412015,
+            "estimated_mastery_change": 0.5756970510412014,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 14,
+            "correct_rate": 0.48,
+            "final_mean_mastery": 0.888538047412899,
+            "estimated_mastery_change": 0.688538047412899,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 15,
+            "correct_rate": 0.46,
+            "final_mean_mastery": 0.965609268706308,
+            "estimated_mastery_change": 0.7656092687063081,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 16,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.7088466371717578,
+            "estimated_mastery_change": 0.5088466371717577,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 17,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.7126356838647566,
+            "estimated_mastery_change": 0.5126356838647566,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 18,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.6828965617027765,
+            "estimated_mastery_change": 0.48289656170277645,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 19,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.7216807298571559,
+            "estimated_mastery_change": 0.521680729857156,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 20,
+            "correct_rate": 0.46,
+            "final_mean_mastery": 0.7220072128786191,
+            "estimated_mastery_change": 0.5220072128786191,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 21,
+            "correct_rate": 0.48,
+            "final_mean_mastery": 0.7536664349017886,
+            "estimated_mastery_change": 0.5536664349017886,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 22,
+            "correct_rate": 0.26,
+            "final_mean_mastery": 0.6786389607685243,
+            "estimated_mastery_change": 0.47863896076852425,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 23,
+            "correct_rate": 0.36,
+            "final_mean_mastery": 0.7267340311324645,
+            "estimated_mastery_change": 0.5267340311324644,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 24,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.8693727647692193,
+            "estimated_mastery_change": 0.6693727647692194,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 25,
+            "correct_rate": 0.4,
+            "final_mean_mastery": 0.8473048597114603,
+            "estimated_mastery_change": 0.6473048597114603,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 26,
+            "correct_rate": 0.42,
+            "final_mean_mastery": 0.7485423939510295,
+            "estimated_mastery_change": 0.5485423939510294,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 27,
+            "correct_rate": 0.34,
+            "final_mean_mastery": 0.6696641489476954,
+            "estimated_mastery_change": 0.4696641489476954,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 28,
+            "correct_rate": 0.48,
+            "final_mean_mastery": 0.8459036302119046,
+            "estimated_mastery_change": 0.6459036302119046,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          },
+          {
+            "seed": 29,
+            "correct_rate": 0.32,
+            "final_mean_mastery": 0.7375235919296642,
+            "estimated_mastery_change": 0.5375235919296641,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 1.0
+          }
+        ]
+      },
+      {
+        "profile": "Uneven",
+        "policy": "round_robin",
+        "seeds": 30,
+        "sessions_per_run": 10,
+        "questions_per_session": 5,
+        "mean_correct_rate": 0.6113333333333334,
+        "mean_final_mastery": 0.8055472767070424,
+        "mean_estimated_mastery_change": 0.6055472767070423,
+        "mean_repetition_rate": 0.0,
+        "mean_weakest_topic_selection_rate": 0.32466666666666666,
+        "runs": [
+          {
+            "seed": 0,
+            "correct_rate": 0.52,
+            "final_mean_mastery": 0.8513646270373427,
+            "estimated_mastery_change": 0.6513646270373428,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 1,
+            "correct_rate": 0.66,
+            "final_mean_mastery": 0.8185923030805156,
+            "estimated_mastery_change": 0.6185923030805156,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.4
+          },
+          {
+            "seed": 2,
+            "correct_rate": 0.56,
+            "final_mean_mastery": 0.7555016697342344,
+            "estimated_mastery_change": 0.5555016697342343,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 3,
+            "correct_rate": 0.6,
+            "final_mean_mastery": 0.724565338765456,
+            "estimated_mastery_change": 0.5245653387654561,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.36
+          },
+          {
+            "seed": 4,
+            "correct_rate": 0.6,
+            "final_mean_mastery": 0.853134464213226,
+            "estimated_mastery_change": 0.653134464213226,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.36
+          },
+          {
+            "seed": 5,
+            "correct_rate": 0.56,
+            "final_mean_mastery": 0.9600521513295344,
+            "estimated_mastery_change": 0.7600521513295344,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 6,
+            "correct_rate": 0.5,
+            "final_mean_mastery": 0.7236358753389243,
+            "estimated_mastery_change": 0.5236358753389243,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 7,
+            "correct_rate": 0.68,
+            "final_mean_mastery": 0.7238519781078443,
+            "estimated_mastery_change": 0.5238519781078443,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 8,
+            "correct_rate": 0.66,
+            "final_mean_mastery": 0.8532913640711166,
+            "estimated_mastery_change": 0.6532913640711167,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.4
+          },
+          {
+            "seed": 9,
+            "correct_rate": 0.7,
+            "final_mean_mastery": 0.9579953438685194,
+            "estimated_mastery_change": 0.7579953438685194,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 10,
+            "correct_rate": 0.58,
+            "final_mean_mastery": 0.7238095050691729,
+            "estimated_mastery_change": 0.5238095050691729,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 11,
+            "correct_rate": 0.56,
+            "final_mean_mastery": 0.7237490498496092,
+            "estimated_mastery_change": 0.5237490498496091,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.28
+          },
+          {
+            "seed": 12,
+            "correct_rate": 0.66,
+            "final_mean_mastery": 0.7606448625602361,
+            "estimated_mastery_change": 0.560644862560236,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 13,
+            "correct_rate": 0.68,
+            "final_mean_mastery": 0.9911714546745036,
+            "estimated_mastery_change": 0.7911714546745037,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 14,
+            "correct_rate": 0.68,
+            "final_mean_mastery": 0.7557921600533986,
+            "estimated_mastery_change": 0.5557921600533986,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 15,
+            "correct_rate": 0.54,
+            "final_mean_mastery": 0.7240139293016535,
+            "estimated_mastery_change": 0.5240139293016535,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 16,
+            "correct_rate": 0.66,
+            "final_mean_mastery": 0.9679191428919863,
+            "estimated_mastery_change": 0.7679191428919863,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 17,
+            "correct_rate": 0.48,
+            "final_mean_mastery": 0.716520218688335,
+            "estimated_mastery_change": 0.5165202186883351,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 18,
+            "correct_rate": 0.74,
+            "final_mean_mastery": 0.989290418653006,
+            "estimated_mastery_change": 0.7892904186530061,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.36
+          },
+          {
+            "seed": 19,
+            "correct_rate": 0.66,
+            "final_mean_mastery": 0.7245930449265725,
+            "estimated_mastery_change": 0.5245930449265725,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 20,
+            "correct_rate": 0.7,
+            "final_mean_mastery": 0.8293581255628014,
+            "estimated_mastery_change": 0.6293581255628014,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 21,
+            "correct_rate": 0.64,
+            "final_mean_mastery": 0.9048557091079888,
+            "estimated_mastery_change": 0.7048557091079888,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.34
+          },
+          {
+            "seed": 22,
+            "correct_rate": 0.6,
+            "final_mean_mastery": 0.854644084327441,
+            "estimated_mastery_change": 0.654644084327441,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          },
+          {
+            "seed": 23,
+            "correct_rate": 0.62,
+            "final_mean_mastery": 0.7289810908517658,
+            "estimated_mastery_change": 0.5289810908517658,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 24,
+            "correct_rate": 0.48,
+            "final_mean_mastery": 0.7235720924245544,
+            "estimated_mastery_change": 0.5235720924245544,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 25,
+            "correct_rate": 0.58,
+            "final_mean_mastery": 0.7275584570387184,
+            "estimated_mastery_change": 0.5275584570387184,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 26,
+            "correct_rate": 0.5,
+            "final_mean_mastery": 0.7242016998636736,
+            "estimated_mastery_change": 0.5242016998636736,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 27,
+            "correct_rate": 0.56,
+            "final_mean_mastery": 0.7396678894159159,
+            "estimated_mastery_change": 0.5396678894159159,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.32
+          },
+          {
+            "seed": 28,
+            "correct_rate": 0.74,
+            "final_mean_mastery": 0.9050951348851063,
+            "estimated_mastery_change": 0.7050951348851062,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.36
+          },
+          {
+            "seed": 29,
+            "correct_rate": 0.64,
+            "final_mean_mastery": 0.7289951155181179,
+            "estimated_mastery_change": 0.5289951155181178,
+            "repetition_rate": 0.0,
+            "weakest_topic_selection_rate": 0.3
+          }
+        ]
+      }
+    ]
+  },
+  "scope": "Custom retrieval metrics and fixed-ability simulation; no generated-answer faithfulness, RAGAS scores or real learning gains are measured.",
+  "provenance": {
+    "python": "3.14.2",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "source_sha256": "350898cd32f9f4d744bf9e199d4f1edc5ebb065c4e9b15c66dcc462108e08712",
+    "script_sha256": "6a02a705cc06347e70afa75a7f439823eecd4b488238b8b3fec442b38487b23a",
+    "pydantic": "2.13.5",
+    "seed_range": [
+      0,
+      29
+    ],
+    "answer_events": 9000,
+    "uses_live_llm": false,
+    "session_boundary_note": "Ten sessions are ten consecutive blocks of five answers; no time gaps or forgetting are simulated."
+  }
+}

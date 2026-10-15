@@ -1,0 +1,28 @@
+
+> conceptflow-web@0.1.0 test
+> node --test tests/*.test.js
+
+✔ seven distinct themes include neutral default and two dark palettes (0.7666ms)
+✔ English is default and both additional languages are labelled experimental (1.3973ms)
+✔ search matches chat titles or workspace names without changing order (1.4779ms)
+✔ workspace scope and pinned filter combine with search (0.1891ms)
+✔ workspace search includes entries beyond the first eight (0.1837ms)
+✔ newly saved chats are returned without browser caching (1.0565ms)
+✔ a course endpoint failure does not freeze recent chats (0.3459ms)
+✔ failed history does not erase previously displayed conversations (1.2008ms)
+✔ material preparation waits through reading and indexing (1.4638ms)
+✔ cancelled or failed reading releases the loader with an error (0.5268ms)
+✔ five neutrally named avatars include two short-haired portraits and one animal (857.4605ms)
+✔ welcome page reuses enlarged brain logo and retains auth slot and FAQs (5.8455ms)
+✔ dashboard preserves all eight tool buttons with background accent colors (10.9063ms)
+✔ maths renders fractions and letter superscripts rather than raw commands (12.2335ms)
+✔ probability rows become a table and untrusted text remains escaped (1.3433ms)
+✔ recording filenames are not misinterpreted as mathematical subscripts (0.4349ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1334.9965
