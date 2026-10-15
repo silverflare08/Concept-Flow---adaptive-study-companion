@@ -1,0 +1,4525 @@
+{
+  "created_utc": "2026-10-15T04:24:48.476977+00:00",
+  "provenance": {
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "source_sha256": "350898cd32f9f4d744bf9e199d4f1edc5ebb065c4e9b15c66dcc462108e08712",
+    "script_sha256": "3bcca9e6ef1a53dd71540a6472376fb007aa5c1a747a949659df471b85f7342c",
+    "cases_sha256": "1287933d03b293981d4173c8b2ebb3d3b26784c6b58282cc0fc09374d92ce110",
+    "pydantic": "2.14.1",
+    "seed_range": [
+      0,
+      29
+    ],
+    "uses_live_llm": false,
+    "answer_events": 9000
+  },
+  "project_files_unchanged": true,
+  "input_hashes": {
+    "C:\\Users\\PALAKM\\Downloads\\polyglot-shorthand2\\studybuddy\\benchmark-results.json": "2e7c93b7c76b7890aac9ff11e7365c61268b0e1cdbb1e0f620ab0b393c29e1e7",
+    "C:\\Users\\PALAKM\\Downloads\\polyglot-shorthand2\\studybuddy\\benchmark_report.py": "6a02a705cc06347e70afa75a7f439823eecd4b488238b8b3fec442b38487b23a",
+    "C:\\Users\\PALAKM\\Downloads\\polyglot-shorthand2\\studybuddy\\samples\\graph-basics.md": "350898cd32f9f4d744bf9e199d4f1edc5ebb065c4e9b15c66dcc462108e08712",
+    "C:\\Users\\PALAKM\\Downloads\\polyglot-shorthand2\\studybuddy\\src\\studybuddy\\tutor\\bkt.py": "7ee1a37e6269c49f726eeacc425ce0cc1554038656ed1d72d05b62c04b413350",
+    "C:\\Users\\PALAKM\\Downloads\\polyglot-shorthand2\\studybuddy\\src\\studybuddy\\assessment.py": "76ec614a3f0647a399d3d939ef93868382c5e8100310578bec398149b6215a09",
+    "C:\\Users\\PALAKM\\Downloads\\polyglot-shorthand2\\studybuddy\\src\\studybuddy\\tutor\\grounded.py": "d30713b6df1ce12047cc528d47360cc59301418995fa61916d58a261a8cbaa94",
+    "C:\\Users\\PALAKM\\Downloads\\polyglot-shorthand2\\studybuddy\\src\\studybuddy\\retrieval\\bm25.py": "1235301d321d4544ed39b2fd29b9de6d9cce4159fda5fba36167642bb8a40545"
+  },
+  "original_results_reproduced": true,
+  "original_retrieval": {
+    "cases": [
+      {
+        "query": "Which data structure does BFS use?",
+        "reference_locations": [
+          "paragraph 13",
+          "paragraph 15",
+          "paragraph 7"
+        ],
+        "retrieved_locations": [
+          "paragraph 15",
+          "paragraph 9",
+          "paragraph 7"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.6666666666666666,
+        "recall_at_3": 0.6666666666666666
+      },
+      {
+        "query": "Which data structure does DFS use?",
+        "reference_locations": [
+          "paragraph 13"
+        ],
+        "retrieved_locations": [
+          "paragraph 15",
+          "paragraph 13",
+          "paragraph 9"
+        ],
+        "first_reference_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 0.5,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "How does depth-first search explore branches?",
+        "reference_locations": [
+          "paragraph 13"
+        ],
+        "retrieved_locations": [
+          "paragraph 12",
+          "paragraph 13",
+          "paragraph 6"
+        ],
+        "first_reference_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 0.5,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What are graph vertices and edges?",
+        "reference_locations": [
+          "paragraph 4"
+        ],
+        "retrieved_locations": [
+          "paragraph 5",
+          "paragraph 4",
+          "paragraph 15"
+        ],
+        "first_reference_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 0.5,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "How does an adjacency list store neighbours?",
+        "reference_locations": [
+          "paragraph 4"
+        ],
+        "retrieved_locations": [
+          "paragraph 4",
+          "paragraph 9",
+          "paragraph 5"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is the space requirement of an adjacency matrix?",
+        "reference_locations": [
+          "paragraph 5"
+        ],
+        "retrieved_locations": [
+          "paragraph 5",
+          "paragraph 4",
+          "paragraph 15"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is a sparse graph?",
+        "reference_locations": [
+          "paragraph 5"
+        ],
+        "retrieved_locations": [
+          "paragraph 5",
+          "paragraph 15",
+          "paragraph 3"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is BFS time complexity with an adjacency list?",
+        "reference_locations": [
+          "paragraph 15",
+          "paragraph 9"
+        ],
+        "retrieved_locations": [
+          "paragraph 15",
+          "paragraph 9",
+          "paragraph 5"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.6666666666666666,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "Does BFS find shortest paths in an unweighted graph?",
+        "reference_locations": [
+          "paragraph 9"
+        ],
+        "retrieved_locations": [
+          "paragraph 9",
+          "paragraph 15",
+          "paragraph 4"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "Does BFS find a minimum-weight path in a weighted graph?",
+        "reference_locations": [
+          "paragraph 9"
+        ],
+        "retrieved_locations": [
+          "paragraph 9",
+          "paragraph 15",
+          "paragraph 4"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is the BFS order starting at A in the worked example?",
+        "reference_locations": [
+          "paragraph 11"
+        ],
+        "retrieved_locations": [
+          "paragraph 11",
+          "paragraph 15",
+          "paragraph 10"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is the distance from A to D in the example?",
+        "reference_locations": [
+          "paragraph 11",
+          "paragraph 15"
+        ],
+        "retrieved_locations": [
+          "paragraph 15",
+          "paragraph 11",
+          "paragraph 8"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.6666666666666666,
+        "recall_at_3": 1.0
+      }
+    ],
+    "metrics": {
+      "hit_at_1": 0.75,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 0.875,
+      "precision_at_3": 0.41666666666666663,
+      "recall_at_3": 0.9722222222222222
+    },
+    "diagnostics": {
+      "total_labeled_references": 16,
+      "precision_at_3_ceiling": 0.4444444444444444,
+      "unlabeled_retrieved_slots": 21,
+      "paragraph15_in_top3": 10,
+      "paragraph15_in_reference_sets": 3,
+      "paragraph15_retrieved_without_reference_label": 7,
+      "paragraph15_text": "Which data structure does BFS use? A queue.\nWhen should BFS mark a vertex visited? When the vertex is enqueued.\nWhat is the adjacency-list time complexity of BFS? O(V + E).\nHow many edges are in the shortest path from A to D in the example? Two.",
+      "label_interpretation": "Unlabeled slots are not independently adjudicated as wholly irrelevant."
+    }
+  },
+  "uniform_random_top3": {
+    "method": "Exact combinatorial expectation: three distinct passages sampled uniformly without replacement from all 15 indexed passages, including headings.",
+    "expected_hit_at_1": 0.08888888888888889,
+    "expected_hit_at_3": 0.2549450549450549,
+    "expected_precision_at_3": 0.08888888888888889
+  },
+  "without_paragraph15": {
+    "cases": [
+      {
+        "query": "Which data structure does BFS use?",
+        "reference_locations": [
+          "paragraph 13",
+          "paragraph 7"
+        ],
+        "retrieved_locations": [
+          "paragraph 9",
+          "paragraph 7",
+          "paragraph 13"
+        ],
+        "first_reference_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 0.5,
+        "precision_at_3": 0.6666666666666666,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "Which data structure does DFS use?",
+        "reference_locations": [
+          "paragraph 13"
+        ],
+        "retrieved_locations": [
+          "paragraph 13",
+          "paragraph 9"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "How does depth-first search explore branches?",
+        "reference_locations": [
+          "paragraph 13"
+        ],
+        "retrieved_locations": [
+          "paragraph 12",
+          "paragraph 13",
+          "paragraph 6"
+        ],
+        "first_reference_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 0.5,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What are graph vertices and edges?",
+        "reference_locations": [
+          "paragraph 4"
+        ],
+        "retrieved_locations": [
+          "paragraph 5",
+          "paragraph 4",
+          "paragraph 2"
+        ],
+        "first_reference_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 0.5,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "How does an adjacency list store neighbours?",
+        "reference_locations": [
+          "paragraph 4"
+        ],
+        "retrieved_locations": [
+          "paragraph 4",
+          "paragraph 9",
+          "paragraph 5"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is the space requirement of an adjacency matrix?",
+        "reference_locations": [
+          "paragraph 5"
+        ],
+        "retrieved_locations": [
+          "paragraph 5",
+          "paragraph 4",
+          "paragraph 9"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is a sparse graph?",
+        "reference_locations": [
+          "paragraph 5"
+        ],
+        "retrieved_locations": [
+          "paragraph 5",
+          "paragraph 11",
+          "paragraph 3"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is BFS time complexity with an adjacency list?",
+        "reference_locations": [
+          "paragraph 9"
+        ],
+        "retrieved_locations": [
+          "paragraph 9",
+          "paragraph 5",
+          "paragraph 4"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "Does BFS find shortest paths in an unweighted graph?",
+        "reference_locations": [
+          "paragraph 9"
+        ],
+        "retrieved_locations": [
+          "paragraph 9",
+          "paragraph 4",
+          "paragraph 5"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "Does BFS find a minimum-weight path in a weighted graph?",
+        "reference_locations": [
+          "paragraph 9"
+        ],
+        "retrieved_locations": [
+          "paragraph 9",
+          "paragraph 4",
+          "paragraph 11"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is the BFS order starting at A in the worked example?",
+        "reference_locations": [
+          "paragraph 11"
+        ],
+        "retrieved_locations": [
+          "paragraph 11",
+          "paragraph 10",
+          "paragraph 9"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "What is the distance from A to D in the example?",
+        "reference_locations": [
+          "paragraph 11"
+        ],
+        "retrieved_locations": [
+          "paragraph 11",
+          "paragraph 8",
+          "paragraph 7"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      }
+    ],
+    "metrics": {
+      "hit_at_1": 0.75,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 0.875,
+      "precision_at_3": 0.3611111111111111,
+      "recall_at_3": 1.0
+    },
+    "method": "Rebuild BM25 with paragraph 15 removed (IDF changes); remove it from reference labels too, retaining all 12 queries."
+  },
+  "paraphrases": {
+    "cases": [
+      {
+        "query": "Which first-in-first-out container supports the level-by-level traversal described in the notes?",
+        "reference_locations": [
+          "paragraph 13",
+          "paragraph 15",
+          "paragraph 7"
+        ],
+        "retrieved_locations": [
+          "paragraph 7",
+          "paragraph 15",
+          "paragraph 9"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.6666666666666666,
+        "recall_at_3": 0.6666666666666666
+      },
+      {
+        "query": "When a graph is stored as a table of vertex connections, how does its memory requirement scale with V?",
+        "reference_locations": [
+          "paragraph 5"
+        ],
+        "retrieved_locations": [
+          "paragraph 15",
+          "paragraph 4",
+          "paragraph 9"
+        ],
+        "first_reference_rank": null,
+        "hit_at_1": false,
+        "hit_at_3": false,
+        "reciprocal_rank_at_3": 0,
+        "precision_at_3": 0.0,
+        "recall_at_3": 0.0
+      },
+      {
+        "query": "Starting from A, how many links must be traversed to reach D along the shortest route in the example?",
+        "reference_locations": [
+          "paragraph 11",
+          "paragraph 15"
+        ],
+        "retrieved_locations": [
+          "paragraph 15",
+          "paragraph 11",
+          "paragraph 9"
+        ],
+        "first_reference_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 1.0,
+        "precision_at_3": 0.6666666666666666,
+        "recall_at_3": 1.0
+      },
+      {
+        "query": "Which mechanism remembers unfinished branches during the depth-first procedure?",
+        "reference_locations": [
+          "paragraph 13"
+        ],
+        "retrieved_locations": [
+          "paragraph 12",
+          "paragraph 13",
+          "paragraph 15"
+        ],
+        "first_reference_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "reciprocal_rank_at_3": 0.5,
+        "precision_at_3": 0.3333333333333333,
+        "recall_at_3": 1.0
+      }
+    ],
+    "metrics": {
+      "hit_at_1": 0.5,
+      "hit_at_3": 0.75,
+      "reciprocal_rank_at_3": 0.625,
+      "precision_at_3": 0.41666666666666663,
+      "recall_at_3": 0.6666666666666666
+    }
+  },
+  "unsupported_queries": [
+    {
+      "query": "Give Dijkstra's priority queue update rule for a weighted graph.",
+      "missing_information": "The notes do not describe Dijkstra or its priority-queue updates.",
+      "retrieved_locations": [
+        "paragraph 5",
+        "paragraph 9",
+        "paragraph 2"
+      ],
+      "empty_retrieval": false,
+      "tutor_refusal": null
+    },
+    {
+      "query": "How does Kahn's algorithm compute a topological ordering of directed vertices?",
+      "missing_information": "The notes do not describe Kahn's algorithm or topological ordering.",
+      "retrieved_locations": [
+        "paragraph 4",
+        "paragraph 15",
+        "paragraph 9"
+      ],
+      "empty_retrieval": false,
+      "tutor_refusal": null
+    },
+    {
+      "query": "How are negative-weight cycles detected with Bellman-Ford in a weighted graph?",
+      "missing_information": "The notes do not describe Bellman-Ford or negative-cycle detection.",
+      "retrieved_locations": [
+        "paragraph 9",
+        "paragraph 15",
+        "paragraph 5"
+      ],
+      "empty_retrieval": false,
+      "tutor_refusal": null
+    },
+    {
+      "query": "Derive adjacency matrix eigenvalues for the worked graph.",
+      "missing_information": "The notes do not explain eigenvalues or how to calculate them.",
+      "retrieved_locations": [
+        "paragraph 5",
+        "paragraph 4",
+        "paragraph 10"
+      ],
+      "empty_retrieval": false,
+      "tutor_refusal": null
+    }
+  ],
+  "simulation": [
+    {
+      "profile": "Novice",
+      "policy": "adaptive",
+      "runs": [
+        {
+          "seed": 0,
+          "correct_rate": 0.3,
+          "final_mean_mastery": 0.7094957215703057,
+          "estimated_mastery_change": 0.5094957215703058,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.37156155539579455,
+          "final_topic_estimates": {
+            "Graph representations": 0.37156155539579455,
+            "BFS": 0.8831316294094873,
+            "DFS": 0.8737939799056355
+          },
+          "topic_question_counts": {
+            "Graph representations": 24,
+            "BFS": 13,
+            "DFS": 13
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 1,
+          "correct_rate": 0.46,
+          "final_mean_mastery": 0.7258389173393552,
+          "estimated_mastery_change": 0.5258389173393552,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.18880770593607732,
+          "final_topic_estimates": {
+            "Graph representations": 0.9945660037810933,
+            "BFS": 0.9941430423008951,
+            "DFS": 0.18880770593607732
+          },
+          "topic_question_counts": {
+            "Graph representations": 10,
+            "BFS": 13,
+            "DFS": 27
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 2,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.7082409776339231,
+          "estimated_mastery_change": 0.5082409776339232,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17180947662759458,
+          "final_topic_estimates": {
+            "Graph representations": 0.9755623590954916,
+            "BFS": 0.17180947662759458,
+            "DFS": 0.9773510971786833
+          },
+          "topic_question_counts": {
+            "Graph representations": 21,
+            "BFS": 26,
+            "DFS": 3
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 3,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.7108384397944747,
+          "estimated_mastery_change": 0.5108384397944747,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.18834819367848205,
+          "final_topic_estimates": {
+            "Graph representations": 0.9735144806459113,
+            "BFS": 0.18834819367848205,
+            "DFS": 0.9706526450590306
+          },
+          "topic_question_counts": {
+            "Graph representations": 18,
+            "BFS": 5,
+            "DFS": 27
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 4,
+          "correct_rate": 0.44,
+          "final_mean_mastery": 0.9481714515356162,
+          "estimated_mastery_change": 0.7481714515356161,
+          "repetition_rate": 0.06,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.8670635189068518,
+          "final_topic_estimates": {
+            "Graph representations": 0.9938436279814051,
+            "BFS": 0.8670635189068518,
+            "DFS": 0.9836072077185918
+          },
+          "topic_question_counts": {
+            "Graph representations": 7,
+            "BFS": 4,
+            "DFS": 39
+          },
+          "pool_wrapped_topics": [
+            "DFS"
+          ]
+        },
+        {
+          "seed": 5,
+          "correct_rate": 0.42,
+          "final_mean_mastery": 0.9648766147034293,
+          "estimated_mastery_change": 0.7648766147034294,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.905161399781907,
+          "final_topic_estimates": {
+            "Graph representations": 0.9949024405472877,
+            "BFS": 0.905161399781907,
+            "DFS": 0.9945660037810933
+          },
+          "topic_question_counts": {
+            "Graph representations": 18,
+            "BFS": 22,
+            "DFS": 10
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 6,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.8703441853442212,
+          "estimated_mastery_change": 0.6703441853442211,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.8604064978782429,
+          "final_topic_estimates": {
+            "Graph representations": 0.8752394243497945,
+            "BFS": 0.8604064978782429,
+            "DFS": 0.8753866338046263
+          },
+          "topic_question_counts": {
+            "Graph representations": 18,
+            "BFS": 26,
+            "DFS": 6
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 7,
+          "correct_rate": 0.5,
+          "final_mean_mastery": 0.8448281657035687,
+          "estimated_mastery_change": 0.6448281657035686,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5604289006677099,
+          "final_topic_estimates": {
+            "Graph representations": 0.5604289006677099,
+            "BFS": 0.9892132875361443,
+            "DFS": 0.9848423089068518
+          },
+          "topic_question_counts": {
+            "Graph representations": 25,
+            "BFS": 20,
+            "DFS": 5
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 8,
+          "correct_rate": 0.44,
+          "final_mean_mastery": 0.8260570354803374,
+          "estimated_mastery_change": 0.6260570354803374,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5203892566133896,
+          "final_topic_estimates": {
+            "Graph representations": 0.5203892566133896,
+            "BFS": 0.9836236234580049,
+            "DFS": 0.9741582263696177
+          },
+          "topic_question_counts": {
+            "Graph representations": 36,
+            "BFS": 10,
+            "DFS": 4
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 9,
+          "correct_rate": 0.48,
+          "final_mean_mastery": 0.9716090577841953,
+          "estimated_mastery_change": 0.7716090577841952,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.957713660683031,
+          "final_topic_estimates": {
+            "Graph representations": 0.957713660683031,
+            "BFS": 0.9757760181896917,
+            "DFS": 0.981337494479863
+          },
+          "topic_question_counts": {
+            "Graph representations": 32,
+            "BFS": 7,
+            "DFS": 11
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 10,
+          "correct_rate": 0.38,
+          "final_mean_mastery": 0.8383164939182999,
+          "estimated_mastery_change": 0.6383164939182999,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5622312555480855,
+          "final_topic_estimates": {
+            "Graph representations": 0.97700418997271,
+            "BFS": 0.5622312555480855,
+            "DFS": 0.975714036234104
+          },
+          "topic_question_counts": {
+            "Graph representations": 27,
+            "BFS": 14,
+            "DFS": 9
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 11,
+          "correct_rate": 0.32,
+          "final_mean_mastery": 0.7133823011630701,
+          "estimated_mastery_change": 0.51338230116307,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.1716828049669492,
+          "final_topic_estimates": {
+            "Graph representations": 0.1716828049669492,
+            "BFS": 0.994891963559249,
+            "DFS": 0.9735721349630122
+          },
+          "topic_question_counts": {
+            "Graph representations": 26,
+            "BFS": 10,
+            "DFS": 14
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 12,
+          "correct_rate": 0.48,
+          "final_mean_mastery": 0.7177346945086404,
+          "estimated_mastery_change": 0.5177346945086403,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.18017178588102456,
+          "final_topic_estimates": {
+            "Graph representations": 0.9803445071837312,
+            "BFS": 0.18017178588102456,
+            "DFS": 0.9926877904611654
+          },
+          "topic_question_counts": {
+            "Graph representations": 16,
+            "BFS": 16,
+            "DFS": 18
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 13,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.8347150001059596,
+          "estimated_mastery_change": 0.6347150001059596,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5464536579658256,
+          "final_topic_estimates": {
+            "Graph representations": 0.5464536579658256,
+            "BFS": 0.9841626012210289,
+            "DFS": 0.9735287411310243
+          },
+          "topic_question_counts": {
+            "Graph representations": 37,
+            "BFS": 7,
+            "DFS": 6
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 14,
+          "correct_rate": 0.46,
+          "final_mean_mastery": 0.8871177211159021,
+          "estimated_mastery_change": 0.6871177211159021,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.6995296016246361,
+          "final_topic_estimates": {
+            "Graph representations": 0.9773510971786833,
+            "BFS": 0.6995296016246361,
+            "DFS": 0.9844724645443872
+          },
+          "topic_question_counts": {
+            "Graph representations": 3,
+            "BFS": 26,
+            "DFS": 21
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 15,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.7532436028164164,
+          "estimated_mastery_change": 0.5532436028164165,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.3102329747078609,
+          "final_topic_estimates": {
+            "Graph representations": 0.9759299801541043,
+            "BFS": 0.973567853587284,
+            "DFS": 0.3102329747078609
+          },
+          "topic_question_counts": {
+            "Graph representations": 12,
+            "BFS": 31,
+            "DFS": 7
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 16,
+          "correct_rate": 0.44,
+          "final_mean_mastery": 0.7086630850691896,
+          "estimated_mastery_change": 0.5086630850691896,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17286825960504765,
+          "final_topic_estimates": {
+            "Graph representations": 0.17286825960504765,
+            "BFS": 0.9773510971786833,
+            "DFS": 0.975769898423838
+          },
+          "topic_question_counts": {
+            "Graph representations": 30,
+            "BFS": 3,
+            "DFS": 17
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 17,
+          "correct_rate": 0.38,
+          "final_mean_mastery": 0.6817729633463083,
+          "estimated_mastery_change": 0.4817729633463083,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.19667167075921288,
+          "final_topic_estimates": {
+            "Graph representations": 0.8751184781486878,
+            "BFS": 0.9735287411310243,
+            "DFS": 0.19667167075921288
+          },
+          "topic_question_counts": {
+            "Graph representations": 12,
+            "BFS": 6,
+            "DFS": 32
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 18,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.7425695444616727,
+          "estimated_mastery_change": 0.5425695444616727,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.3650017344445583,
+          "final_topic_estimates": {
+            "Graph representations": 0.8891390517467835,
+            "BFS": 0.3650017344445583,
+            "DFS": 0.9735678471936763
+          },
+          "topic_question_counts": {
+            "Graph representations": 24,
+            "BFS": 17,
+            "DFS": 9
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 19,
+          "correct_rate": 0.5,
+          "final_mean_mastery": 0.8620340434758531,
+          "estimated_mastery_change": 0.6620340434758532,
+          "repetition_rate": 0.04,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5955646027771395,
+          "final_topic_estimates": {
+            "Graph representations": 0.9956451598606593,
+            "BFS": 0.9948923677897606,
+            "DFS": 0.5955646027771395
+          },
+          "topic_question_counts": {
+            "Graph representations": 4,
+            "BFS": 8,
+            "DFS": 38
+          },
+          "pool_wrapped_topics": [
+            "DFS"
+          ]
+        },
+        {
+          "seed": 20,
+          "correct_rate": 0.46,
+          "final_mean_mastery": 0.8636568481523162,
+          "estimated_mastery_change": 0.6636568481523162,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.6022449302419064,
+          "final_topic_estimates": {
+            "Graph representations": 0.9935685575273298,
+            "BFS": 0.9951570566877127,
+            "DFS": 0.6022449302419064
+          },
+          "topic_question_counts": {
+            "Graph representations": 10,
+            "BFS": 21,
+            "DFS": 19
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 21,
+          "correct_rate": 0.42,
+          "final_mean_mastery": 0.736938168876864,
+          "estimated_mastery_change": 0.536938168876864,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.2666325444582146,
+          "final_topic_estimates": {
+            "Graph representations": 0.9735165783240999,
+            "BFS": 0.2666325444582146,
+            "DFS": 0.9706653838482775
+          },
+          "topic_question_counts": {
+            "Graph representations": 7,
+            "BFS": 27,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 22,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.7836267860989834,
+          "estimated_mastery_change": 0.5836267860989834,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5843910423782464,
+          "final_topic_estimates": {
+            "Graph representations": 0.8833732875112326,
+            "BFS": 0.5843910423782464,
+            "DFS": 0.8831160284074712
+          },
+          "topic_question_counts": {
+            "Graph representations": 25,
+            "BFS": 12,
+            "DFS": 13
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 23,
+          "correct_rate": 0.5,
+          "final_mean_mastery": 0.9942549730651422,
+          "estimated_mastery_change": 0.7942549730651423,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9915801057064981,
+          "final_topic_estimates": {
+            "Graph representations": 0.9949029997714592,
+            "BFS": 0.9915801057064981,
+            "DFS": 0.9962818137174693
+          },
+          "topic_question_counts": {
+            "Graph representations": 24,
+            "BFS": 13,
+            "DFS": 13
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 24,
+          "correct_rate": 0.38,
+          "final_mean_mastery": 0.7189106458603429,
+          "estimated_mastery_change": 0.518910645860343,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.30892265122118595,
+          "final_topic_estimates": {
+            "Graph representations": 0.30892265122118595,
+            "BFS": 0.9259182902626725,
+            "DFS": 0.9218909960971703
+          },
+          "topic_question_counts": {
+            "Graph representations": 12,
+            "BFS": 13,
+            "DFS": 25
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 25,
+          "correct_rate": 0.44,
+          "final_mean_mastery": 0.9584245205370504,
+          "estimated_mastery_change": 0.7584245205370503,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9188306551957354,
+          "final_topic_estimates": {
+            "Graph representations": 0.9188306551957354,
+            "BFS": 0.9735157570956144,
+            "DFS": 0.9829271493198015
+          },
+          "topic_question_counts": {
+            "Graph representations": 21,
+            "BFS": 13,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 26,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.717025163976758,
+          "estimated_mastery_change": 0.517025163976758,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.2780523226369582,
+          "final_topic_estimates": {
+            "Graph representations": 0.9363707802649142,
+            "BFS": 0.2780523226369582,
+            "DFS": 0.9366523890284016
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 23,
+            "DFS": 10
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 27,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.9219067895640495,
+          "estimated_mastery_change": 0.7219067895640494,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.8736320585925699,
+          "final_topic_estimates": {
+            "Graph representations": 0.9456178931448758,
+            "BFS": 0.8736320585925699,
+            "DFS": 0.9464704169547029
+          },
+          "topic_question_counts": {
+            "Graph representations": 22,
+            "BFS": 5,
+            "DFS": 23
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 28,
+          "correct_rate": 0.54,
+          "final_mean_mastery": 0.8467383081824963,
+          "estimated_mastery_change": 0.6467383081824962,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5599653004510678,
+          "final_topic_estimates": {
+            "Graph representations": 0.5599653004510678,
+            "BFS": 0.9954073151895692,
+            "DFS": 0.9848423089068518
+          },
+          "topic_question_counts": {
+            "Graph representations": 38,
+            "BFS": 7,
+            "DFS": 5
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 29,
+          "correct_rate": 0.44,
+          "final_mean_mastery": 0.7587299952423776,
+          "estimated_mastery_change": 0.5587299952423777,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.2842002686236842,
+          "final_topic_estimates": {
+            "Graph representations": 0.2842002686236842,
+            "BFS": 0.9953364944677984,
+            "DFS": 0.9966532226356501
+          },
+          "topic_question_counts": {
+            "Graph representations": 29,
+            "BFS": 8,
+            "DFS": 13
+          },
+          "pool_wrapped_topics": []
+        }
+      ],
+      "summary": {
+        "correct_rate": {
+          "mean": 0.41733333333333333,
+          "sample_sd": 0.060053615891211706,
+          "minimum": 0.3,
+          "maximum": 0.54,
+          "seeds": 30
+        },
+        "final_mean_mastery": {
+          "mean": 0.8106687405475707,
+          "sample_sd": 0.09691742983097008,
+          "minimum": 0.6817729633463083,
+          "maximum": 0.9942549730651422,
+          "seeds": 30
+        },
+        "estimated_mastery_change": {
+          "mean": 0.6106687405475707,
+          "sample_sd": 0.09691742983097007,
+          "minimum": 0.4817729633463083,
+          "maximum": 0.7942549730651423,
+          "seeds": 30
+        },
+        "minimum_topic_estimate": {
+          "mean": 0.502018346465183,
+          "sample_sd": 0.2781320076363699,
+          "minimum": 0.1716828049669492,
+          "maximum": 0.9915801057064981,
+          "seeds": 30
+        },
+        "repetition_rate": {
+          "mean": 0.003333333333333333,
+          "sample_sd": 0.012954385047312087,
+          "minimum": 0.0,
+          "maximum": 0.06,
+          "seeds": 30
+        },
+        "weakest_topic_selection_rate": {
+          "mean": 1.0,
+          "sample_sd": 0.0,
+          "minimum": 1.0,
+          "maximum": 1.0,
+          "seeds": 30
+        }
+      }
+    },
+    {
+      "profile": "Novice",
+      "policy": "round_robin",
+      "runs": [
+        {
+          "seed": 0,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.6350528959285338,
+          "estimated_mastery_change": 0.43505289592853374,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.37843835346918986,
+          "final_topic_estimates": {
+            "Graph representations": 0.5598214643267035,
+            "BFS": 0.9668988699897078,
+            "DFS": 0.37843835346918986
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 1,
+          "correct_rate": 0.44,
+          "final_mean_mastery": 0.5009815528975079,
+          "estimated_mastery_change": 0.3009815528975079,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.20292691791310716,
+          "final_topic_estimates": {
+            "Graph representations": 0.4557912994957259,
+            "BFS": 0.20292691791310716,
+            "DFS": 0.8442264412836907
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 2,
+          "correct_rate": 0.32,
+          "final_mean_mastery": 0.29736506590534545,
+          "estimated_mastery_change": 0.09736506590534544,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.26,
+          "minimum_topic_estimate": 0.17148581153385112,
+          "final_topic_estimates": {
+            "Graph representations": 0.54713018455698,
+            "BFS": 0.17148581153385112,
+            "DFS": 0.1734792016252052
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 3,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.37727545799038104,
+          "estimated_mastery_change": 0.17727545799038102,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.38,
+          "minimum_topic_estimate": 0.17401430426611575,
+          "final_topic_estimates": {
+            "Graph representations": 0.17401430426611575,
+            "BFS": 0.6489908234056811,
+            "DFS": 0.30882124629934626
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 4,
+          "correct_rate": 0.44,
+          "final_mean_mastery": 0.6793050614875492,
+          "estimated_mastery_change": 0.4793050614875492,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.38,
+          "minimum_topic_estimate": 0.17145266217219748,
+          "final_topic_estimates": {
+            "Graph representations": 0.8735707576166308,
+            "BFS": 0.17145266217219748,
+            "DFS": 0.9928917646738193
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 5,
+          "correct_rate": 0.42,
+          "final_mean_mastery": 0.8354280793313013,
+          "estimated_mastery_change": 0.6354280793313012,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.5481931503195315,
+          "final_topic_estimates": {
+            "Graph representations": 0.9837030025733617,
+            "BFS": 0.5481931503195315,
+            "DFS": 0.9743880851010106
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 6,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.5822527806067129,
+          "estimated_mastery_change": 0.3822527806067129,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.2762709851755619,
+          "final_topic_estimates": {
+            "Graph representations": 0.2762709851755619,
+            "BFS": 0.5965206461009656,
+            "DFS": 0.8739667105436112
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 7,
+          "correct_rate": 0.5,
+          "final_mean_mastery": 0.6153264027572893,
+          "estimated_mastery_change": 0.4153264027572893,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.38,
+          "minimum_topic_estimate": 0.17164832419771764,
+          "final_topic_estimates": {
+            "Graph representations": 0.17164832419771764,
+            "BFS": 0.6771983945698378,
+            "DFS": 0.9971324895043127
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 8,
+          "correct_rate": 0.46,
+          "final_mean_mastery": 0.6597431300754434,
+          "estimated_mastery_change": 0.4597431300754434,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.28,
+          "minimum_topic_estimate": 0.559874525396006,
+          "final_topic_estimates": {
+            "Graph representations": 0.559874525396006,
+            "BFS": 0.5994992856772063,
+            "DFS": 0.8198555791531178
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 9,
+          "correct_rate": 0.5,
+          "final_mean_mastery": 0.7883827076033612,
+          "estimated_mastery_change": 0.5883827076033612,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.36,
+          "minimum_topic_estimate": 0.49116489553729936,
+          "final_topic_estimates": {
+            "Graph representations": 0.8739860433584227,
+            "BFS": 0.9999971839143613,
+            "DFS": 0.49116489553729936
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 10,
+          "correct_rate": 0.38,
+          "final_mean_mastery": 0.456448873823193,
+          "estimated_mastery_change": 0.256448873823193,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.36,
+          "minimum_topic_estimate": 0.17142965959261677,
+          "final_topic_estimates": {
+            "Graph representations": 0.17142965959261677,
+            "BFS": 0.9999974373079866,
+            "DFS": 0.19791952456897555
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 11,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.43142804196999424,
+          "estimated_mastery_change": 0.23142804196999422,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.187216566277478,
+          "final_topic_estimates": {
+            "Graph representations": 0.187216566277478,
+            "BFS": 0.26043868123674785,
+            "DFS": 0.8466288783957568
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 12,
+          "correct_rate": 0.44,
+          "final_mean_mastery": 0.6344026839791093,
+          "estimated_mastery_change": 0.43440268397910925,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.1858098077302893,
+          "final_topic_estimates": {
+            "Graph representations": 0.7206619328864786,
+            "BFS": 0.1858098077302893,
+            "DFS": 0.9967363113205598
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 13,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.53494377510492,
+          "estimated_mastery_change": 0.33494377510491996,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.42,
+          "minimum_topic_estimate": 0.2680101728020273,
+          "final_topic_estimates": {
+            "Graph representations": 0.9735224493514995,
+            "BFS": 0.2680101728020273,
+            "DFS": 0.36329870316123314
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 14,
+          "correct_rate": 0.46,
+          "final_mean_mastery": 0.6126690161861753,
+          "estimated_mastery_change": 0.4126690161861753,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.27152862710664066,
+          "final_topic_estimates": {
+            "Graph representations": 0.27152862710664066,
+            "BFS": 0.5731615775886397,
+            "DFS": 0.9933168438632455
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 15,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.6493035170786475,
+          "estimated_mastery_change": 0.4493035170786475,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.26,
+          "minimum_topic_estimate": 0.58224352898638,
+          "final_topic_estimates": {
+            "Graph representations": 0.6567382227985,
+            "BFS": 0.7089287994510627,
+            "DFS": 0.58224352898638
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 16,
+          "correct_rate": 0.48,
+          "final_mean_mastery": 0.6413260801544561,
+          "estimated_mastery_change": 0.4413260801544561,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.24,
+          "minimum_topic_estimate": 0.17533017041435675,
+          "final_topic_estimates": {
+            "Graph representations": 0.9038578665715985,
+            "BFS": 0.17533017041435675,
+            "DFS": 0.8447902034774131
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 17,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.45702727226664197,
+          "estimated_mastery_change": 0.25702727226664196,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.44,
+          "minimum_topic_estimate": 0.17599348590618,
+          "final_topic_estimates": {
+            "Graph representations": 0.2731980629201526,
+            "BFS": 0.17599348590618,
+            "DFS": 0.9218902679735934
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 18,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.5627107108897919,
+          "estimated_mastery_change": 0.36271071088979184,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.38,
+          "minimum_topic_estimate": 0.17341614889487167,
+          "final_topic_estimates": {
+            "Graph representations": 0.9678716736456928,
+            "BFS": 0.546844310128811,
+            "DFS": 0.17341614889487167
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 19,
+          "correct_rate": 0.48,
+          "final_mean_mastery": 0.7109479778242526,
+          "estimated_mastery_change": 0.5109479778242525,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.17387689754646407,
+          "final_topic_estimates": {
+            "Graph representations": 0.17387689754646407,
+            "BFS": 0.9764202763861725,
+            "DFS": 0.9825467595401213
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 20,
+          "correct_rate": 0.44,
+          "final_mean_mastery": 0.628069172161499,
+          "estimated_mastery_change": 0.42806917216149903,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.22,
+          "minimum_topic_estimate": 0.464859460678009,
+          "final_topic_estimates": {
+            "Graph representations": 0.9504660627618836,
+            "BFS": 0.464859460678009,
+            "DFS": 0.4688819930446047
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 21,
+          "correct_rate": 0.42,
+          "final_mean_mastery": 0.5888449084965874,
+          "estimated_mastery_change": 0.3888449084965874,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.18695656236868916,
+          "final_topic_estimates": {
+            "Graph representations": 0.840935060898216,
+            "BFS": 0.7386431022228571,
+            "DFS": 0.18695656236868916
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 22,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.5664417530797856,
+          "estimated_mastery_change": 0.3664417530797856,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.1715078479141937,
+          "final_topic_estimates": {
+            "Graph representations": 0.6091260570820186,
+            "BFS": 0.9186913542431445,
+            "DFS": 0.1715078479141937
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 23,
+          "correct_rate": 0.46,
+          "final_mean_mastery": 0.9229296083912597,
+          "estimated_mastery_change": 0.7229296083912597,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.42,
+          "minimum_topic_estimate": 0.8480668048187109,
+          "final_topic_estimates": {
+            "Graph representations": 0.996971069172707,
+            "BFS": 0.9237509511823614,
+            "DFS": 0.8480668048187109
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 24,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.4801047455844798,
+          "estimated_mastery_change": 0.2801047455844798,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.22,
+          "minimum_topic_estimate": 0.17142967929412573,
+          "final_topic_estimates": {
+            "Graph representations": 0.17142967929412573,
+            "BFS": 0.26902628837491427,
+            "DFS": 0.9998582690843995
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 25,
+          "correct_rate": 0.38,
+          "final_mean_mastery": 0.61414990174039,
+          "estimated_mastery_change": 0.41414990174038996,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.28,
+          "minimum_topic_estimate": 0.17143682696928275,
+          "final_topic_estimates": {
+            "Graph representations": 0.6710699267269189,
+            "BFS": 0.9999429515249683,
+            "DFS": 0.17143682696928275
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 26,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.5856716694935934,
+          "estimated_mastery_change": 0.3856716694935934,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.17421773531866044,
+          "final_topic_estimates": {
+            "Graph representations": 0.17421773531866044,
+            "BFS": 0.6003706608594168,
+            "DFS": 0.9824266123027029
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 27,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.6336786198417454,
+          "estimated_mastery_change": 0.43367861984174544,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.4,
+          "minimum_topic_estimate": 0.20749177672432836,
+          "final_topic_estimates": {
+            "Graph representations": 0.9993814180554516,
+            "BFS": 0.20749177672432836,
+            "DFS": 0.6941626647454563
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 28,
+          "correct_rate": 0.56,
+          "final_mean_mastery": 0.7746364550597401,
+          "estimated_mastery_change": 0.57463645505974,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.35516850386442456,
+          "final_topic_estimates": {
+            "Graph representations": 0.9784467844774175,
+            "BFS": 0.35516850386442456,
+            "DFS": 0.9902940768373784
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 29,
+          "correct_rate": 0.38,
+          "final_mean_mastery": 0.47427702828291896,
+          "estimated_mastery_change": 0.27427702828291894,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.16,
+          "minimum_topic_estimate": 0.18698536141220914,
+          "final_topic_estimates": {
+            "Graph representations": 0.18698536141220914,
+            "BFS": 0.2604578161527188,
+            "DFS": 0.9753879072838288
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        }
+      ],
+      "summary": {
+        "correct_rate": {
+          "mean": 0.41333333333333333,
+          "sample_sd": 0.05809227697102396,
+          "minimum": 0.32,
+          "maximum": 0.56,
+          "seeds": 30
+        },
+        "final_mean_mastery": {
+          "mean": 0.5977041648664202,
+          "sample_sd": 0.13323722691412232,
+          "minimum": 0.29736506590534545,
+          "maximum": 0.9229296083912597,
+          "seeds": 30
+        },
+        "estimated_mastery_change": {
+          "mean": 0.3977041648664202,
+          "sample_sd": 0.13323722691412232,
+          "minimum": 0.09736506590534544,
+          "maximum": 0.7229296083912597,
+          "seeds": 30
+        },
+        "minimum_topic_estimate": {
+          "mean": 0.2816148518200172,
+          "sample_sd": 0.17158473947974023,
+          "minimum": 0.17142965959261677,
+          "maximum": 0.8480668048187109,
+          "seeds": 30
+        },
+        "repetition_rate": {
+          "mean": 0.0,
+          "sample_sd": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0,
+          "seeds": 30
+        },
+        "weakest_topic_selection_rate": {
+          "mean": 0.324,
+          "sample_sd": 0.06547439615394814,
+          "minimum": 0.16,
+          "maximum": 0.44,
+          "seeds": 30
+        }
+      }
+    },
+    {
+      "profile": "Intermediate",
+      "policy": "adaptive",
+      "runs": [
+        {
+          "seed": 0,
+          "correct_rate": 0.54,
+          "final_mean_mastery": 0.9738362104373155,
+          "estimated_mastery_change": 0.7738362104373155,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9306311069215033,
+          "final_topic_estimates": {
+            "Graph representations": 0.9937748007233331,
+            "BFS": 0.9306311069215033,
+            "DFS": 0.9971027236671101
+          },
+          "topic_question_counts": {
+            "Graph representations": 19,
+            "BFS": 25,
+            "DFS": 6
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 1,
+          "correct_rate": 0.66,
+          "final_mean_mastery": 0.9642616819036786,
+          "estimated_mastery_change": 0.7642616819036785,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.8928148595129033,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999774876233657,
+            "BFS": 0.8928148595129033,
+            "DFS": 0.9999926985747668
+          },
+          "topic_question_counts": {
+            "Graph representations": 11,
+            "BFS": 25,
+            "DFS": 14
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 2,
+          "correct_rate": 0.54,
+          "final_mean_mastery": 0.9612713141433019,
+          "estimated_mastery_change": 0.7612713141433018,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.8841374946464365,
+          "final_topic_estimates": {
+            "Graph representations": 0.9998324523908723,
+            "BFS": 0.8841374946464365,
+            "DFS": 0.9998439953925969
+          },
+          "topic_question_counts": {
+            "Graph representations": 12,
+            "BFS": 32,
+            "DFS": 6
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 3,
+          "correct_rate": 0.6,
+          "final_mean_mastery": 0.9977825356505478,
+          "estimated_mastery_change": 0.7977825356505477,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9943840974301242,
+          "final_topic_estimates": {
+            "Graph representations": 0.9943840974301242,
+            "BFS": 0.9991746234536358,
+            "DFS": 0.9997888860678831
+          },
+          "topic_question_counts": {
+            "Graph representations": 35,
+            "BFS": 5,
+            "DFS": 10
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 4,
+          "correct_rate": 0.68,
+          "final_mean_mastery": 0.9999070663683245,
+          "estimated_mastery_change": 0.7999070663683245,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9998439953925969,
+          "final_topic_estimates": {
+            "Graph representations": 0.9998439953925969,
+            "BFS": 0.9999685928499352,
+            "DFS": 0.9999086108624412
+          },
+          "topic_question_counts": {
+            "Graph representations": 6,
+            "BFS": 12,
+            "DFS": 32
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 5,
+          "correct_rate": 0.6,
+          "final_mean_mastery": 0.9986300602860556,
+          "estimated_mastery_change": 0.7986300602860557,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.996284470408882,
+          "final_topic_estimates": {
+            "Graph representations": 0.9998230224665031,
+            "BFS": 0.996284470408882,
+            "DFS": 0.9997826879827817
+          },
+          "topic_question_counts": {
+            "Graph representations": 21,
+            "BFS": 8,
+            "DFS": 21
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 6,
+          "correct_rate": 0.54,
+          "final_mean_mastery": 0.9507128654098618,
+          "estimated_mastery_change": 0.7507128654098618,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.8607219547414084,
+          "final_topic_estimates": {
+            "Graph representations": 0.8607219547414084,
+            "BFS": 0.9956142472653214,
+            "DFS": 0.9958023942228553
+          },
+          "topic_question_counts": {
+            "Graph representations": 27,
+            "BFS": 11,
+            "DFS": 12
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 7,
+          "correct_rate": 0.82,
+          "final_mean_mastery": 0.9999998011417063,
+          "estimated_mastery_change": 0.7999998011417062,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9999994627635503,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999999781791161,
+            "BFS": 0.9999999624824525,
+            "DFS": 0.9999994627635503
+          },
+          "topic_question_counts": {
+            "Graph representations": 21,
+            "BFS": 11,
+            "DFS": 18
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 8,
+          "correct_rate": 0.68,
+          "final_mean_mastery": 0.999847579473482,
+          "estimated_mastery_change": 0.7998475794734821,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9998008815048609,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999277237865528,
+            "BFS": 0.9998008815048609,
+            "DFS": 0.9998141331290322
+          },
+          "topic_question_counts": {
+            "Graph representations": 20,
+            "BFS": 8,
+            "DFS": 22
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 9,
+          "correct_rate": 0.7,
+          "final_mean_mastery": 0.9999450329426003,
+          "estimated_mastery_change": 0.7999450329426003,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9999233115835161,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999233115835161,
+            "BFS": 0.9999603360473143,
+            "DFS": 0.9999514511969705
+          },
+          "topic_question_counts": {
+            "Graph representations": 24,
+            "BFS": 15,
+            "DFS": 11
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 10,
+          "correct_rate": 0.62,
+          "final_mean_mastery": 0.9990283777820097,
+          "estimated_mastery_change": 0.7990283777820097,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.997488441084952,
+          "final_topic_estimates": {
+            "Graph representations": 0.997488441084952,
+            "BFS": 0.9998008815048609,
+            "DFS": 0.9997958107562163
+          },
+          "topic_question_counts": {
+            "Graph representations": 31,
+            "BFS": 8,
+            "DFS": 11
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 11,
+          "correct_rate": 0.68,
+          "final_mean_mastery": 0.9952948338617713,
+          "estimated_mastery_change": 0.7952948338617714,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9859629811268358,
+          "final_topic_estimates": {
+            "Graph representations": 0.9859629811268358,
+            "BFS": 0.9999614040834249,
+            "DFS": 0.9999601163750532
+          },
+          "topic_question_counts": {
+            "Graph representations": 28,
+            "BFS": 11,
+            "DFS": 11
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 12,
+          "correct_rate": 0.62,
+          "final_mean_mastery": 0.8619278077021065,
+          "estimated_mastery_change": 0.6619278077021065,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5862494339808101,
+          "final_topic_estimates": {
+            "Graph representations": 0.999717465322976,
+            "BFS": 0.5862494339808101,
+            "DFS": 0.9998165238025336
+          },
+          "topic_question_counts": {
+            "Graph representations": 22,
+            "BFS": 18,
+            "DFS": 10
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 13,
+          "correct_rate": 0.62,
+          "final_mean_mastery": 0.9996959786800632,
+          "estimated_mastery_change": 0.7996959786800633,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9995436582529122,
+          "final_topic_estimates": {
+            "Graph representations": 0.9997002823946806,
+            "BFS": 0.9995436582529122,
+            "DFS": 0.9998439953925969
+          },
+          "topic_question_counts": {
+            "Graph representations": 22,
+            "BFS": 22,
+            "DFS": 6
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 14,
+          "correct_rate": 0.58,
+          "final_mean_mastery": 0.995966731395873,
+          "estimated_mastery_change": 0.7959667313958729,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9937768924015513,
+          "final_topic_estimates": {
+            "Graph representations": 0.9937768924015513,
+            "BFS": 0.9970228639357989,
+            "DFS": 0.9971004378502688
+          },
+          "topic_question_counts": {
+            "Graph representations": 31,
+            "BFS": 9,
+            "DFS": 10
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 15,
+          "correct_rate": 0.58,
+          "final_mean_mastery": 0.9973798775251153,
+          "estimated_mastery_change": 0.7973798775251153,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.993470618239509,
+          "final_topic_estimates": {
+            "Graph representations": 0.9996135946712561,
+            "BFS": 0.993470618239509,
+            "DFS": 0.9990554196645808
+          },
+          "topic_question_counts": {
+            "Graph representations": 32,
+            "BFS": 12,
+            "DFS": 6
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 16,
+          "correct_rate": 0.66,
+          "final_mean_mastery": 0.9996807762553248,
+          "estimated_mastery_change": 0.7996807762553249,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9994780926345029,
+          "final_topic_estimates": {
+            "Graph representations": 0.9997581506637597,
+            "BFS": 0.9994780926345029,
+            "DFS": 0.9998060854677118
+          },
+          "topic_question_counts": {
+            "Graph representations": 24,
+            "BFS": 18,
+            "DFS": 8
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 17,
+          "correct_rate": 0.52,
+          "final_mean_mastery": 0.917194324371613,
+          "estimated_mastery_change": 0.717194324371613,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.7902914490417842,
+          "final_topic_estimates": {
+            "Graph representations": 0.9786816193990349,
+            "BFS": 0.98260990467402,
+            "DFS": 0.7902914490417842
+          },
+          "topic_question_counts": {
+            "Graph representations": 20,
+            "BFS": 7,
+            "DFS": 23
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 18,
+          "correct_rate": 0.7,
+          "final_mean_mastery": 0.9998158796297884,
+          "estimated_mastery_change": 0.7998158796297883,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9995147270993145,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999705288871121,
+            "BFS": 0.9995147270993145,
+            "DFS": 0.9999623829029384
+          },
+          "topic_question_counts": {
+            "Graph representations": 7,
+            "BFS": 34,
+            "DFS": 9
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 19,
+          "correct_rate": 0.7,
+          "final_mean_mastery": 0.9999796022321814,
+          "estimated_mastery_change": 0.7999796022321815,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9999705288871121,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999705288871121,
+            "BFS": 0.9999738447028039,
+            "DFS": 0.9999944331066281
+          },
+          "topic_question_counts": {
+            "Graph representations": 7,
+            "BFS": 35,
+            "DFS": 8
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 20,
+          "correct_rate": 0.72,
+          "final_mean_mastery": 0.9999990350633321,
+          "estimated_mastery_change": 0.7999990350633321,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9999986865312906,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999992218947904,
+            "BFS": 0.9999986865312906,
+            "DFS": 0.9999991967639151
+          },
+          "topic_question_counts": {
+            "Graph representations": 22,
+            "BFS": 15,
+            "DFS": 13
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 21,
+          "correct_rate": 0.66,
+          "final_mean_mastery": 0.9928576248749621,
+          "estimated_mastery_change": 0.7928576248749621,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9787033370466179,
+          "final_topic_estimates": {
+            "Graph representations": 0.9787033370466179,
+            "BFS": 0.9999071546753301,
+            "DFS": 0.9999623829029384
+          },
+          "topic_question_counts": {
+            "Graph representations": 19,
+            "BFS": 22,
+            "DFS": 9
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 22,
+          "correct_rate": 0.52,
+          "final_mean_mastery": 0.9907650286906196,
+          "estimated_mastery_change": 0.7907650286906196,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9802587820954689,
+          "final_topic_estimates": {
+            "Graph representations": 0.9953661378602549,
+            "BFS": 0.9802587820954689,
+            "DFS": 0.9966701661161348
+          },
+          "topic_question_counts": {
+            "Graph representations": 27,
+            "BFS": 15,
+            "DFS": 8
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 23,
+          "correct_rate": 0.74,
+          "final_mean_mastery": 0.9999970707723389,
+          "estimated_mastery_change": 0.799997070772339,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9999947018990555,
+          "final_topic_estimates": {
+            "Graph representations": 0.999997861037157,
+            "BFS": 0.9999947018990555,
+            "DFS": 0.9999986493808042
+          },
+          "topic_question_counts": {
+            "Graph representations": 15,
+            "BFS": 24,
+            "DFS": 11
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 24,
+          "correct_rate": 0.52,
+          "final_mean_mastery": 0.9958874058496511,
+          "estimated_mastery_change": 0.795887405849651,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9953281359832653,
+          "final_topic_estimates": {
+            "Graph representations": 0.9953281359832653,
+            "BFS": 0.9956142472653214,
+            "DFS": 0.9967198343003665
+          },
+          "topic_question_counts": {
+            "Graph representations": 28,
+            "BFS": 11,
+            "DFS": 11
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 25,
+          "correct_rate": 0.72,
+          "final_mean_mastery": 0.9999979103559282,
+          "estimated_mastery_change": 0.7999979103559283,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9999966990715726,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999980019912723,
+            "BFS": 0.9999966990715726,
+            "DFS": 0.9999990300049396
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 18,
+            "DFS": 15
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 26,
+          "correct_rate": 0.56,
+          "final_mean_mastery": 0.9974937498790633,
+          "estimated_mastery_change": 0.7974937498790633,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9939549337098308,
+          "final_topic_estimates": {
+            "Graph representations": 0.9939549337098308,
+            "BFS": 0.9991159088720215,
+            "DFS": 0.9994104070553373
+          },
+          "topic_question_counts": {
+            "Graph representations": 27,
+            "BFS": 9,
+            "DFS": 14
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 27,
+          "correct_rate": 0.62,
+          "final_mean_mastery": 0.9985440654921339,
+          "estimated_mastery_change": 0.7985440654921339,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9976555917174115,
+          "final_topic_estimates": {
+            "Graph representations": 0.9987364361043705,
+            "BFS": 0.9992401686546198,
+            "DFS": 0.9976555917174115
+          },
+          "topic_question_counts": {
+            "Graph representations": 12,
+            "BFS": 25,
+            "DFS": 13
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 28,
+          "correct_rate": 0.68,
+          "final_mean_mastery": 0.9961023523945893,
+          "estimated_mastery_change": 0.7961023523945894,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9883994542409562,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999486548112476,
+            "BFS": 0.9883994542409562,
+            "DFS": 0.9999589481315642
+          },
+          "topic_question_counts": {
+            "Graph representations": 27,
+            "BFS": 12,
+            "DFS": 11
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 29,
+          "correct_rate": 0.72,
+          "final_mean_mastery": 0.9999176710653745,
+          "estimated_mastery_change": 0.7999176710653746,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9997733899152587,
+          "final_topic_estimates": {
+            "Graph representations": 0.9997733899152587,
+            "BFS": 0.9999851901742369,
+            "DFS": 0.9999944331066281
+          },
+          "topic_question_counts": {
+            "Graph representations": 26,
+            "BFS": 16,
+            "DFS": 8
+          },
+          "pool_wrapped_topics": []
+        }
+      ],
+      "summary": {
+        "correct_rate": {
+          "mean": 0.6366666666666667,
+          "sample_sd": 0.07684885897940698,
+          "minimum": 0.52,
+          "maximum": 0.82,
+          "seeds": 30
+        },
+        "final_mean_mastery": {
+          "mean": 0.9861240083876904,
+          "sample_sd": 0.03009490929802922,
+          "minimum": 0.8619278077021065,
+          "maximum": 0.9999998011417063,
+          "seeds": 30
+        },
+        "estimated_mastery_change": {
+          "mean": 0.7861240083876905,
+          "sample_sd": 0.030094909298029233,
+          "minimum": 0.6619278077021065,
+          "maximum": 0.7999998011417062,
+          "seeds": 30
+        },
+        "minimum_topic_estimate": {
+          "mean": 0.9612784056621931,
+          "sample_sd": 0.08723375888284696,
+          "minimum": 0.5862494339808101,
+          "maximum": 0.9999994627635503,
+          "seeds": 30
+        },
+        "repetition_rate": {
+          "mean": 0.0,
+          "sample_sd": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0,
+          "seeds": 30
+        },
+        "weakest_topic_selection_rate": {
+          "mean": 1.0,
+          "sample_sd": 0.0,
+          "minimum": 1.0,
+          "maximum": 1.0,
+          "seeds": 30
+        }
+      }
+    },
+    {
+      "profile": "Intermediate",
+      "policy": "round_robin",
+      "runs": [
+        {
+          "seed": 0,
+          "correct_rate": 0.56,
+          "final_mean_mastery": 0.8514483608146893,
+          "estimated_mastery_change": 0.6514483608146893,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.5603350444495893,
+          "final_topic_estimates": {
+            "Graph representations": 0.5603350444495893,
+            "BFS": 0.9940104583616629,
+            "DFS": 0.9999995796328159
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 1,
+          "correct_rate": 0.66,
+          "final_mean_mastery": 0.9959519443004872,
+          "estimated_mastery_change": 0.7959519443004872,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.46,
+          "minimum_topic_estimate": 0.9901747313971504,
+          "final_topic_estimates": {
+            "Graph representations": 0.9901747313971504,
+            "BFS": 0.9976811718416486,
+            "DFS": 0.9999999296626625
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 2,
+          "correct_rate": 0.6,
+          "final_mean_mastery": 0.866877565582202,
+          "estimated_mastery_change": 0.6668775655822019,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.26,
+          "minimum_topic_estimate": 0.6017926338250955,
+          "final_topic_estimates": {
+            "Graph representations": 0.9988479001419475,
+            "BFS": 0.6017926338250955,
+            "DFS": 0.9999921627795628
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 3,
+          "correct_rate": 0.64,
+          "final_mean_mastery": 0.9526847387503299,
+          "estimated_mastery_change": 0.7526847387503299,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.38,
+          "minimum_topic_estimate": 0.8597512320702126,
+          "final_topic_estimates": {
+            "Graph representations": 0.9983180465054642,
+            "BFS": 0.8597512320702126,
+            "DFS": 0.9999849376753129
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 4,
+          "correct_rate": 0.62,
+          "final_mean_mastery": 0.9577920517205291,
+          "estimated_mastery_change": 0.757792051720529,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.36,
+          "minimum_topic_estimate": 0.8737964004405672,
+          "final_topic_estimates": {
+            "Graph representations": 0.8737964004405672,
+            "BFS": 0.9999977534875498,
+            "DFS": 0.9995820012334701
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 5,
+          "correct_rate": 0.58,
+          "final_mean_mastery": 0.8922195498579942,
+          "estimated_mastery_change": 0.6922195498579942,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.6894491548461354,
+          "final_topic_estimates": {
+            "Graph representations": 0.9872095491359953,
+            "BFS": 0.6894491548461354,
+            "DFS": 0.999999945591852
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 6,
+          "correct_rate": 0.58,
+          "final_mean_mastery": 0.8713805801048601,
+          "estimated_mastery_change": 0.67138058010486,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.6149362580186118,
+          "final_topic_estimates": {
+            "Graph representations": 0.6149362580186118,
+            "BFS": 0.9997092832072713,
+            "DFS": 0.9994961990886972
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 7,
+          "correct_rate": 0.76,
+          "final_mean_mastery": 0.9987696463190819,
+          "estimated_mastery_change": 0.7987696463190819,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.52,
+          "minimum_topic_estimate": 0.9963094348733132,
+          "final_topic_estimates": {
+            "Graph representations": 0.9963094348733132,
+            "BFS": 0.9999999211141921,
+            "DFS": 0.9999995829697406
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 8,
+          "correct_rate": 0.7,
+          "final_mean_mastery": 0.9948101844532895,
+          "estimated_mastery_change": 0.7948101844532895,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.9844461476362547,
+          "final_topic_estimates": {
+            "Graph representations": 0.9844461476362547,
+            "BFS": 0.9999995568478163,
+            "DFS": 0.9999848488757975
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 9,
+          "correct_rate": 0.72,
+          "final_mean_mastery": 0.9779413380466394,
+          "estimated_mastery_change": 0.7779413380466393,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.9338390476085504,
+          "final_topic_estimates": {
+            "Graph representations": 0.9338390476085504,
+            "BFS": 0.9999999999386693,
+            "DFS": 0.9999849665926985
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 10,
+          "correct_rate": 0.64,
+          "final_mean_mastery": 0.733314687110667,
+          "estimated_mastery_change": 0.5333146871106671,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.42,
+          "minimum_topic_estimate": 0.1999452449856834,
+          "final_topic_estimates": {
+            "Graph representations": 0.1999452449856834,
+            "BFS": 0.9999999588841847,
+            "DFS": 0.9999988574621332
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 11,
+          "correct_rate": 0.68,
+          "final_mean_mastery": 0.9987587927397787,
+          "estimated_mastery_change": 0.7987587927397788,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.38,
+          "minimum_topic_estimate": 0.996465684684299,
+          "final_topic_estimates": {
+            "Graph representations": 0.996465684684299,
+            "BFS": 0.9999017964224878,
+            "DFS": 0.9999088971125494
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 12,
+          "correct_rate": 0.66,
+          "final_mean_mastery": 0.986061065024792,
+          "estimated_mastery_change": 0.7860610650247919,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.961614536446203,
+          "final_topic_estimates": {
+            "Graph representations": 0.9965690790008646,
+            "BFS": 0.961614536446203,
+            "DFS": 0.9999995796273082
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 13,
+          "correct_rate": 0.6,
+          "final_mean_mastery": 0.9751566793161658,
+          "estimated_mastery_change": 0.7751566793161657,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.44,
+          "minimum_topic_estimate": 0.9395626266027418,
+          "final_topic_estimates": {
+            "Graph representations": 0.9864851383347217,
+            "BFS": 0.9994222730110337,
+            "DFS": 0.9395626266027418
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 14,
+          "correct_rate": 0.64,
+          "final_mean_mastery": 0.7571733656533309,
+          "estimated_mastery_change": 0.5571733656533309,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.27152862710664066,
+          "final_topic_estimates": {
+            "Graph representations": 0.27152862710664066,
+            "BFS": 0.9999916201969955,
+            "DFS": 0.9999998496563567
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 15,
+          "correct_rate": 0.58,
+          "final_mean_mastery": 0.9588672794833124,
+          "estimated_mastery_change": 0.7588672794833125,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.881343407292372,
+          "final_topic_estimates": {
+            "Graph representations": 0.9952689235130435,
+            "BFS": 0.9999895076445217,
+            "DFS": 0.881343407292372
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 16,
+          "correct_rate": 0.68,
+          "final_mean_mastery": 0.9832459379362958,
+          "estimated_mastery_change": 0.7832459379362957,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.36,
+          "minimum_topic_estimate": 0.9498552359808292,
+          "final_topic_estimates": {
+            "Graph representations": 0.9498552359808292,
+            "BFS": 0.9998970200203392,
+            "DFS": 0.9999855578077189
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 17,
+          "correct_rate": 0.54,
+          "final_mean_mastery": 0.7110887729731094,
+          "estimated_mastery_change": 0.5110887729731093,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.44,
+          "minimum_topic_estimate": 0.19278352461314752,
+          "final_topic_estimates": {
+            "Graph representations": 0.9415498043571127,
+            "BFS": 0.19278352461314752,
+            "DFS": 0.998932989949068
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 18,
+          "correct_rate": 0.68,
+          "final_mean_mastery": 0.9997879333644734,
+          "estimated_mastery_change": 0.7997879333644733,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.9995934883514386,
+          "final_topic_estimates": {
+            "Graph representations": 0.9995934883514386,
+            "BFS": 0.9997853099923585,
+            "DFS": 0.9999850017496231
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 19,
+          "correct_rate": 0.7,
+          "final_mean_mastery": 0.9996198809893971,
+          "estimated_mastery_change": 0.7996198809893971,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.9993805768815388,
+          "final_topic_estimates": {
+            "Graph representations": 0.9993805768815388,
+            "BFS": 0.999479283716917,
+            "DFS": 0.9999997823697357
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 20,
+          "correct_rate": 0.74,
+          "final_mean_mastery": 0.9999963841331391,
+          "estimated_mastery_change": 0.799996384133139,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.9999894115567407,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999894115567407,
+            "BFS": 0.9999997683666828,
+            "DFS": 0.9999999724759937
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 21,
+          "correct_rate": 0.62,
+          "final_mean_mastery": 0.7676193824816728,
+          "estimated_mastery_change": 0.5676193824816729,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.36,
+          "minimum_topic_estimate": 0.3038834936038764,
+          "final_topic_estimates": {
+            "Graph representations": 0.9989919694359155,
+            "BFS": 0.9999826844052268,
+            "DFS": 0.3038834936038764
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 22,
+          "correct_rate": 0.58,
+          "final_mean_mastery": 0.9713794480717409,
+          "estimated_mastery_change": 0.7713794480717409,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.9186939337411912,
+          "final_topic_estimates": {
+            "Graph representations": 0.9954444204108732,
+            "BFS": 0.9186939337411912,
+            "DFS": 0.9999999900631583
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 23,
+          "correct_rate": 0.74,
+          "final_mean_mastery": 0.9999668989383265,
+          "estimated_mastery_change": 0.7999668989383264,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.42,
+          "minimum_topic_estimate": 0.9999179608734182,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999827493197171,
+            "BFS": 0.9999999866218442,
+            "DFS": 0.9999179608734182
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 24,
+          "correct_rate": 0.5,
+          "final_mean_mastery": 0.8592654568266418,
+          "estimated_mastery_change": 0.6592654568266418,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.7043008897038118,
+          "final_topic_estimates": {
+            "Graph representations": 0.8736092410028968,
+            "BFS": 0.7043008897038118,
+            "DFS": 0.9998862397732168
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 25,
+          "correct_rate": 0.74,
+          "final_mean_mastery": 0.9989552014302372,
+          "estimated_mastery_change": 0.7989552014302372,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.4,
+          "minimum_topic_estimate": 0.9968656467919508,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999999977927306,
+            "BFS": 0.9999999597060301,
+            "DFS": 0.9968656467919508
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 26,
+          "correct_rate": 0.56,
+          "final_mean_mastery": 0.9742332929675338,
+          "estimated_mastery_change": 0.7742332929675337,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.28,
+          "minimum_topic_estimate": 0.9242054585453691,
+          "final_topic_estimates": {
+            "Graph representations": 0.9242054585453691,
+            "BFS": 0.9998983174244221,
+            "DFS": 0.9985961029328103
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 27,
+          "correct_rate": 0.58,
+          "final_mean_mastery": 0.9960836202945833,
+          "estimated_mastery_change": 0.7960836202945833,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.9892707313445503,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999826960890648,
+            "BFS": 0.9892707313445503,
+            "DFS": 0.9989974334501349
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 28,
+          "correct_rate": 0.7,
+          "final_mean_mastery": 0.9642569217210393,
+          "estimated_mastery_change": 0.7642569217210393,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.38,
+          "minimum_topic_estimate": 0.892862261050329,
+          "final_topic_estimates": {
+            "Graph representations": 0.9999089245038646,
+            "BFS": 0.892862261050329,
+            "DFS": 0.9999995796089243
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 29,
+          "correct_rate": 0.72,
+          "final_mean_mastery": 0.99890392685263,
+          "estimated_mastery_change": 0.7989039268526299,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.4,
+          "minimum_topic_estimate": 0.9967963040026679,
+          "final_topic_estimates": {
+            "Graph representations": 0.9967963040026679,
+            "BFS": 0.9999155473939073,
+            "DFS": 0.9999999291613146
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        }
+      ],
+      "summary": {
+        "correct_rate": {
+          "mean": 0.6433333333333333,
+          "sample_sd": 0.0688993935879091,
+          "minimum": 0.5,
+          "maximum": 0.76,
+          "seeds": 30
+        },
+        "final_mean_mastery": {
+          "mean": 0.9331203629419657,
+          "sample_sd": 0.08929617603517695,
+          "minimum": 0.7110887729731094,
+          "maximum": 0.9999963841331391,
+          "seeds": 30
+        },
+        "estimated_mastery_change": {
+          "mean": 0.7331203629419656,
+          "sample_sd": 0.08929617603517695,
+          "minimum": 0.5110887729731093,
+          "maximum": 0.799996384133139,
+          "seeds": 30
+        },
+        "minimum_topic_estimate": {
+          "mean": 0.8074563043108093,
+          "sample_sd": 0.2602915772613307,
+          "minimum": 0.19278352461314752,
+          "maximum": 0.9999894115567407,
+          "seeds": 30
+        },
+        "repetition_rate": {
+          "mean": 0.0,
+          "sample_sd": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0,
+          "seeds": 30
+        },
+        "weakest_topic_selection_rate": {
+          "mean": 0.3606666666666667,
+          "sample_sd": 0.057890105957893116,
+          "minimum": 0.26,
+          "maximum": 0.52,
+          "seeds": 30
+        }
+      }
+    },
+    {
+      "profile": "Uneven",
+      "policy": "adaptive",
+      "runs": [
+        {
+          "seed": 0,
+          "correct_rate": 0.26,
+          "final_mean_mastery": 0.7001473722790001,
+          "estimated_mastery_change": 0.5001473722790002,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.3337714584217517,
+          "final_topic_estimates": {
+            "Graph representations": 0.3337714584217517,
+            "BFS": 0.8763480777700875,
+            "DFS": 0.8903225806451612
+          },
+          "topic_question_counts": {
+            "Graph representations": 45,
+            "BFS": 3,
+            "DFS": 2
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 1,
+          "correct_rate": 0.42,
+          "final_mean_mastery": 0.7213145666193248,
+          "estimated_mastery_change": 0.5213145666193248,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17142979960098362,
+          "final_topic_estimates": {
+            "Graph representations": 0.17142979960098362,
+            "BFS": 0.9956451598606593,
+            "DFS": 0.9968687403963314
+          },
+          "topic_question_counts": {
+            "Graph representations": 38,
+            "BFS": 4,
+            "DFS": 8
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 2,
+          "correct_rate": 0.24,
+          "final_mean_mastery": 0.6453599519767126,
+          "estimated_mastery_change": 0.4453599519767126,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17177035999992452,
+          "final_topic_estimates": {
+            "Graph representations": 0.17177035999992452,
+            "BFS": 0.8739869152850519,
+            "DFS": 0.8903225806451612
+          },
+          "topic_question_counts": {
+            "Graph representations": 44,
+            "BFS": 4,
+            "DFS": 2
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 3,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.7121461117955793,
+          "estimated_mastery_change": 0.5121461117955792,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17142869012923623,
+          "final_topic_estimates": {
+            "Graph representations": 0.17142869012923623,
+            "BFS": 0.9876585480788184,
+            "DFS": 0.9773510971786833
+          },
+          "topic_question_counts": {
+            "Graph representations": 36,
+            "BFS": 11,
+            "DFS": 3
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 4,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.8450561704436489,
+          "estimated_mastery_change": 0.6450561704436488,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5628425351638655,
+          "final_topic_estimates": {
+            "Graph representations": 0.5628425351638655,
+            "BFS": 0.9773510971786833,
+            "DFS": 0.994974878988398
+          },
+          "topic_question_counts": {
+            "Graph representations": 39,
+            "BFS": 3,
+            "DFS": 8
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 5,
+          "correct_rate": 0.56,
+          "final_mean_mastery": 0.9927860105972893,
+          "estimated_mastery_change": 0.7927860105972893,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9807646598078326,
+          "final_topic_estimates": {
+            "Graph representations": 0.9807646598078326,
+            "BFS": 0.9988723525876468,
+            "DFS": 0.9987210193963886
+          },
+          "topic_question_counts": {
+            "Graph representations": 28,
+            "BFS": 11,
+            "DFS": 11
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 6,
+          "correct_rate": 0.26,
+          "final_mean_mastery": 0.775667461879287,
+          "estimated_mastery_change": 0.575667461879287,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5603317272226123,
+          "final_topic_estimates": {
+            "Graph representations": 0.5603317272226123,
+            "BFS": 0.8903225806451612,
+            "DFS": 0.8763480777700875
+          },
+          "topic_question_counts": {
+            "Graph representations": 45,
+            "BFS": 2,
+            "DFS": 3
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 7,
+          "correct_rate": 0.38,
+          "final_mean_mastery": 0.7080493341460378,
+          "estimated_mastery_change": 0.5080493341460377,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17147885414074693,
+          "final_topic_estimates": {
+            "Graph representations": 0.17147885414074693,
+            "BFS": 0.9773510971786833,
+            "DFS": 0.975318051118683
+          },
+          "topic_question_counts": {
+            "Graph representations": 42,
+            "BFS": 3,
+            "DFS": 5
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 8,
+          "correct_rate": 0.38,
+          "final_mean_mastery": 0.7594339439295904,
+          "estimated_mastery_change": 0.5594339439295903,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.32679250824047035,
+          "final_topic_estimates": {
+            "Graph representations": 0.32679250824047035,
+            "BFS": 0.9773510971786833,
+            "DFS": 0.9741582263696177
+          },
+          "topic_question_counts": {
+            "Graph representations": 43,
+            "BFS": 3,
+            "DFS": 4
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 9,
+          "correct_rate": 0.5,
+          "final_mean_mastery": 0.9501257573697842,
+          "estimated_mastery_change": 0.7501257573697842,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.8904162702566495,
+          "final_topic_estimates": {
+            "Graph representations": 0.8904162702566495,
+            "BFS": 0.98260990467402,
+            "DFS": 0.9773510971786833
+          },
+          "topic_question_counts": {
+            "Graph representations": 40,
+            "BFS": 7,
+            "DFS": 3
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 10,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.7916968217554644,
+          "estimated_mastery_change": 0.5916968217554643,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5603002083970794,
+          "final_topic_estimates": {
+            "Graph representations": 0.5603002083970794,
+            "BFS": 0.8903225806451612,
+            "DFS": 0.9244676762241526
+          },
+          "topic_question_counts": {
+            "Graph representations": 44,
+            "BFS": 2,
+            "DFS": 4
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 11,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.7213965355049023,
+          "estimated_mastery_change": 0.5213965355049024,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17144172298693758,
+          "final_topic_estimates": {
+            "Graph representations": 0.17144172298693758,
+            "BFS": 0.9971027236671101,
+            "DFS": 0.9956451598606593
+          },
+          "topic_question_counts": {
+            "Graph representations": 40,
+            "BFS": 6,
+            "DFS": 4
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 12,
+          "correct_rate": 0.44,
+          "final_mean_mastery": 0.7082941216987125,
+          "estimated_mastery_change": 0.5082941216987125,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17221321679877127,
+          "final_topic_estimates": {
+            "Graph representations": 0.17221321679877127,
+            "BFS": 0.975318051118683,
+            "DFS": 0.9773510971786833
+          },
+          "topic_question_counts": {
+            "Graph representations": 42,
+            "BFS": 5,
+            "DFS": 3
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 13,
+          "correct_rate": 0.32,
+          "final_mean_mastery": 0.7756970510412015,
+          "estimated_mastery_change": 0.5756970510412014,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.546445991833282,
+          "final_topic_estimates": {
+            "Graph representations": 0.546445991833282,
+            "BFS": 0.8903225806451612,
+            "DFS": 0.8903225806451612
+          },
+          "topic_question_counts": {
+            "Graph representations": 46,
+            "BFS": 2,
+            "DFS": 2
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 14,
+          "correct_rate": 0.48,
+          "final_mean_mastery": 0.888538047412899,
+          "estimated_mastery_change": 0.688538047412899,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.7062887898665985,
+          "final_topic_estimates": {
+            "Graph representations": 0.7062887898665985,
+            "BFS": 0.9858618044315006,
+            "DFS": 0.973463547940598
+          },
+          "topic_question_counts": {
+            "Graph representations": 34,
+            "BFS": 9,
+            "DFS": 7
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 15,
+          "correct_rate": 0.46,
+          "final_mean_mastery": 0.965609268706308,
+          "estimated_mastery_change": 0.7656092687063081,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.9068149879561015,
+          "final_topic_estimates": {
+            "Graph representations": 0.9935501463267125,
+            "BFS": 0.99646267183611,
+            "DFS": 0.9068149879561015
+          },
+          "topic_question_counts": {
+            "Graph representations": 29,
+            "BFS": 15,
+            "DFS": 6
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 16,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.7088466371717578,
+          "estimated_mastery_change": 0.5088466371717577,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.1718377171579068,
+          "final_topic_estimates": {
+            "Graph representations": 0.1718377171579068,
+            "BFS": 0.9773510971786833,
+            "DFS": 0.9773510971786833
+          },
+          "topic_question_counts": {
+            "Graph representations": 44,
+            "BFS": 3,
+            "DFS": 3
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 17,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.7126356838647566,
+          "estimated_mastery_change": 0.5126356838647566,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.1869448015514834,
+          "final_topic_estimates": {
+            "Graph representations": 0.1869448015514834,
+            "BFS": 0.9773510971786833,
+            "DFS": 0.9736111528641033
+          },
+          "topic_question_counts": {
+            "Graph representations": 42,
+            "BFS": 3,
+            "DFS": 5
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 18,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.6828965617027765,
+          "estimated_mastery_change": 0.48289656170277645,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.26804452381800703,
+          "final_topic_estimates": {
+            "Graph representations": 0.26804452381800703,
+            "BFS": 0.8903225806451612,
+            "DFS": 0.8903225806451612
+          },
+          "topic_question_counts": {
+            "Graph representations": 46,
+            "BFS": 2,
+            "DFS": 2
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 19,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.7216807298571559,
+          "estimated_mastery_change": 0.521680729857156,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17437837445009102,
+          "final_topic_estimates": {
+            "Graph representations": 0.17437837445009102,
+            "BFS": 0.9956451598606593,
+            "DFS": 0.9950186552607175
+          },
+          "topic_question_counts": {
+            "Graph representations": 41,
+            "BFS": 4,
+            "DFS": 5
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 20,
+          "correct_rate": 0.46,
+          "final_mean_mastery": 0.7220072128786191,
+          "estimated_mastery_change": 0.5220072128786191,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17453838587325501,
+          "final_topic_estimates": {
+            "Graph representations": 0.17453838587325501,
+            "BFS": 0.9969008286348209,
+            "DFS": 0.9945824241277814
+          },
+          "topic_question_counts": {
+            "Graph representations": 35,
+            "BFS": 7,
+            "DFS": 8
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 21,
+          "correct_rate": 0.48,
+          "final_mean_mastery": 0.7536664349017886,
+          "estimated_mastery_change": 0.5536664349017886,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.2666190496403342,
+          "final_topic_estimates": {
+            "Graph representations": 0.2666190496403342,
+            "BFS": 0.9956451598606593,
+            "DFS": 0.9987350952043725
+          },
+          "topic_question_counts": {
+            "Graph representations": 37,
+            "BFS": 4,
+            "DFS": 9
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 22,
+          "correct_rate": 0.26,
+          "final_mean_mastery": 0.6786389607685243,
+          "estimated_mastery_change": 0.47863896076852425,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17143607529079385,
+          "final_topic_estimates": {
+            "Graph representations": 0.17143607529079385,
+            "BFS": 0.9741582263696177,
+            "DFS": 0.8903225806451612
+          },
+          "topic_question_counts": {
+            "Graph representations": 44,
+            "BFS": 4,
+            "DFS": 2
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 23,
+          "correct_rate": 0.36,
+          "final_mean_mastery": 0.7267340311324645,
+          "estimated_mastery_change": 0.5267340311324644,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.18966217069882244,
+          "final_topic_estimates": {
+            "Graph representations": 0.18966217069882244,
+            "BFS": 0.9948947628379117,
+            "DFS": 0.9956451598606593
+          },
+          "topic_question_counts": {
+            "Graph representations": 39,
+            "BFS": 7,
+            "DFS": 4
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 24,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.8693727647692193,
+          "estimated_mastery_change": 0.6693727647692194,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.656608970759357,
+          "final_topic_estimates": {
+            "Graph representations": 0.656608970759357,
+            "BFS": 0.9773510971786833,
+            "DFS": 0.9741582263696177
+          },
+          "topic_question_counts": {
+            "Graph representations": 43,
+            "BFS": 3,
+            "DFS": 4
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 25,
+          "correct_rate": 0.4,
+          "final_mean_mastery": 0.8473048597114603,
+          "estimated_mastery_change": 0.6473048597114603,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5829627679052315,
+          "final_topic_estimates": {
+            "Graph representations": 0.5829627679052315,
+            "BFS": 0.975318051118683,
+            "DFS": 0.9836337601104665
+          },
+          "topic_question_counts": {
+            "Graph representations": 38,
+            "BFS": 5,
+            "DFS": 7
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 26,
+          "correct_rate": 0.42,
+          "final_mean_mastery": 0.7485423939510295,
+          "estimated_mastery_change": 0.5485423939510294,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.2605671883406846,
+          "final_topic_estimates": {
+            "Graph representations": 0.2605671883406846,
+            "BFS": 0.9956451598606593,
+            "DFS": 0.9894148336517445
+          },
+          "topic_question_counts": {
+            "Graph representations": 35,
+            "BFS": 4,
+            "DFS": 11
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 27,
+          "correct_rate": 0.34,
+          "final_mean_mastery": 0.6696641489476954,
+          "estimated_mastery_change": 0.4696641489476954,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.17144969458934176,
+          "final_topic_estimates": {
+            "Graph representations": 0.17144969458934176,
+            "BFS": 0.9472201716085834,
+            "DFS": 0.8903225806451612
+          },
+          "topic_question_counts": {
+            "Graph representations": 40,
+            "BFS": 8,
+            "DFS": 2
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 28,
+          "correct_rate": 0.48,
+          "final_mean_mastery": 0.8459036302119046,
+          "estimated_mastery_change": 0.6459036302119046,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.5468191279801705,
+          "final_topic_estimates": {
+            "Graph representations": 0.5468191279801705,
+            "BFS": 0.9956451598606593,
+            "DFS": 0.9952466027948841
+          },
+          "topic_question_counts": {
+            "Graph representations": 40,
+            "BFS": 4,
+            "DFS": 6
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 29,
+          "correct_rate": 0.32,
+          "final_mean_mastery": 0.7375235919296642,
+          "estimated_mastery_change": 0.5375235919296641,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 1.0,
+          "minimum_topic_estimate": 0.2503773697034576,
+          "final_topic_estimates": {
+            "Graph representations": 0.2503773697034576,
+            "BFS": 0.9773510971786833,
+            "DFS": 0.9848423089068518
+          },
+          "topic_question_counts": {
+            "Graph representations": 42,
+            "BFS": 3,
+            "DFS": 5
+          },
+          "pool_wrapped_topics": []
+        }
+      ],
+      "summary": {
+        "correct_rate": {
+          "mean": 0.38133333333333336,
+          "sample_sd": 0.07789176103274087,
+          "minimum": 0.24,
+          "maximum": 0.56,
+          "seeds": 30
+        },
+        "final_mean_mastery": {
+          "mean": 0.7695578722984853,
+          "sample_sd": 0.0909230766210991,
+          "minimum": 0.6453599519767126,
+          "maximum": 0.9927860105972893,
+          "seeds": 30
+        },
+        "estimated_mastery_change": {
+          "mean": 0.5695578722984853,
+          "sample_sd": 0.09092307662109911,
+          "minimum": 0.4453599519767126,
+          "maximum": 0.7927860105972893,
+          "seeds": 30
+        },
+        "minimum_topic_estimate": {
+          "mean": 0.38255926661939266,
+          "sample_sd": 0.25509971858260627,
+          "minimum": 0.17142869012923623,
+          "maximum": 0.9807646598078326,
+          "seeds": 30
+        },
+        "repetition_rate": {
+          "mean": 0.0,
+          "sample_sd": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0,
+          "seeds": 30
+        },
+        "weakest_topic_selection_rate": {
+          "mean": 1.0,
+          "sample_sd": 0.0,
+          "minimum": 1.0,
+          "maximum": 1.0,
+          "seeds": 30
+        }
+      }
+    },
+    {
+      "profile": "Uneven",
+      "policy": "round_robin",
+      "runs": [
+        {
+          "seed": 0,
+          "correct_rate": 0.52,
+          "final_mean_mastery": 0.8513646270373427,
+          "estimated_mastery_change": 0.6513646270373428,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.559821433828605,
+          "final_topic_estimates": {
+            "Graph representations": 0.559821433828605,
+            "BFS": 0.9942728676506072,
+            "DFS": 0.9999995796328159
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 1,
+          "correct_rate": 0.66,
+          "final_mean_mastery": 0.8185923030805156,
+          "estimated_mastery_change": 0.6185923030805156,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.4,
+          "minimum_topic_estimate": 0.4557912994957259,
+          "final_topic_estimates": {
+            "Graph representations": 0.4557912994957259,
+            "BFS": 0.9999856800831581,
+            "DFS": 0.9999999296626625
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 2,
+          "correct_rate": 0.56,
+          "final_mean_mastery": 0.7555016697342344,
+          "estimated_mastery_change": 0.5555016697342343,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.26659440673318513,
+          "final_topic_estimates": {
+            "Graph representations": 0.26659440673318513,
+            "BFS": 0.9999106141610505,
+            "DFS": 0.9999999883084674
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 3,
+          "correct_rate": 0.6,
+          "final_mean_mastery": 0.724565338765456,
+          "estimated_mastery_change": 0.5245653387654561,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.36,
+          "minimum_topic_estimate": 0.17375444921160527,
+          "final_topic_estimates": {
+            "Graph representations": 0.17375444921160527,
+            "BFS": 0.99995662940945,
+            "DFS": 0.9999849376753129
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 4,
+          "correct_rate": 0.6,
+          "final_mean_mastery": 0.853134464213226,
+          "estimated_mastery_change": 0.653134464213226,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.36,
+          "minimum_topic_estimate": 0.5598214566219059,
+          "final_topic_estimates": {
+            "Graph representations": 0.5598214566219059,
+            "BFS": 0.9999999347843022,
+            "DFS": 0.9995820012334701
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 5,
+          "correct_rate": 0.56,
+          "final_mean_mastery": 0.9600521513295344,
+          "estimated_mastery_change": 0.7600521513295344,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.8831316688329607,
+          "final_topic_estimates": {
+            "Graph representations": 0.8831316688329607,
+            "BFS": 0.9970248395637903,
+            "DFS": 0.999999945591852
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 6,
+          "correct_rate": 0.5,
+          "final_mean_mastery": 0.7236358753389243,
+          "estimated_mastery_change": 0.5236358753389243,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.17142873135671402,
+          "final_topic_estimates": {
+            "Graph representations": 0.17142873135671402,
+            "BFS": 0.9999826955713617,
+            "DFS": 0.9994961990886972
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 7,
+          "correct_rate": 0.68,
+          "final_mean_mastery": 0.7238519781078443,
+          "estimated_mastery_change": 0.5238519781078443,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.17155635354506582,
+          "final_topic_estimates": {
+            "Graph representations": 0.17155635354506582,
+            "BFS": 0.9999999978087264,
+            "DFS": 0.9999995829697406
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 8,
+          "correct_rate": 0.66,
+          "final_mean_mastery": 0.8532913640711166,
+          "estimated_mastery_change": 0.6532913640711167,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.4,
+          "minimum_topic_estimate": 0.559874525396006,
+          "final_topic_estimates": {
+            "Graph representations": 0.559874525396006,
+            "BFS": 0.9999999876902109,
+            "DFS": 0.9999995791271328
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 9,
+          "correct_rate": 0.7,
+          "final_mean_mastery": 0.9579953438685194,
+          "estimated_mastery_change": 0.7579953438685194,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.8739860433584227,
+          "final_topic_estimates": {
+            "Graph representations": 0.8739860433584227,
+            "BFS": 0.9999999999386693,
+            "DFS": 0.9999999883084663
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 10,
+          "correct_rate": 0.58,
+          "final_mean_mastery": 0.7238095050691729,
+          "estimated_mastery_change": 0.5238095050691729,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.1714296588874914,
+          "final_topic_estimates": {
+            "Graph representations": 0.1714296588874914,
+            "BFS": 0.9999999988578939,
+            "DFS": 0.9999988574621332
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 11,
+          "correct_rate": 0.56,
+          "final_mean_mastery": 0.7237490498496092,
+          "estimated_mastery_change": 0.5237490498496091,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.28,
+          "minimum_topic_estimate": 0.1714364560137904,
+          "final_topic_estimates": {
+            "Graph representations": 0.1714364560137904,
+            "BFS": 0.9999017964224878,
+            "DFS": 0.9999088971125494
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 12,
+          "correct_rate": 0.66,
+          "final_mean_mastery": 0.7606448625602361,
+          "estimated_mastery_change": 0.560644862560236,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.2819372817738568,
+          "final_topic_estimates": {
+            "Graph representations": 0.2819372817738568,
+            "BFS": 0.9999977262795434,
+            "DFS": 0.9999995796273082
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 13,
+          "correct_rate": 0.68,
+          "final_mean_mastery": 0.9911714546745036,
+          "estimated_mastery_change": 0.7911714546745037,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.9735148583133333,
+          "final_topic_estimates": {
+            "Graph representations": 0.9735148583133333,
+            "BFS": 0.9999999206375438,
+            "DFS": 0.9999995850726336
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 14,
+          "correct_rate": 0.68,
+          "final_mean_mastery": 0.7557921600533986,
+          "estimated_mastery_change": 0.5557921600533986,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.26737663271223644,
+          "final_topic_estimates": {
+            "Graph representations": 0.26737663271223644,
+            "BFS": 0.9999999977916025,
+            "DFS": 0.9999998496563567
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 15,
+          "correct_rate": 0.54,
+          "final_mean_mastery": 0.7240139293016535,
+          "estimated_mastery_change": 0.5240139293016535,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.2761133296329621,
+          "final_topic_estimates": {
+            "Graph representations": 0.2761133296329621,
+            "BFS": 0.999999959768132,
+            "DFS": 0.8959284985038666
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 16,
+          "correct_rate": 0.66,
+          "final_mean_mastery": 0.9679191428919863,
+          "estimated_mastery_change": 0.7679191428919863,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.9037579093621014,
+          "final_topic_estimates": {
+            "Graph representations": 0.9037579093621014,
+            "BFS": 0.9999999204977552,
+            "DFS": 0.9999995988161023
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 17,
+          "correct_rate": 0.48,
+          "final_mean_mastery": 0.716520218688335,
+          "estimated_mastery_change": 0.5165202186883351,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.17144129471336716,
+          "final_topic_estimates": {
+            "Graph representations": 0.17144129471336716,
+            "BFS": 0.9781492190935132,
+            "DFS": 0.9999701422581246
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 18,
+          "correct_rate": 0.74,
+          "final_mean_mastery": 0.989290418653006,
+          "estimated_mastery_change": 0.7892904186530061,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.36,
+          "minimum_topic_estimate": 0.9678716736456928,
+          "final_topic_estimates": {
+            "Graph representations": 0.9678716736456928,
+            "BFS": 0.9999999999386582,
+            "DFS": 0.999999582374667
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 19,
+          "correct_rate": 0.66,
+          "final_mean_mastery": 0.7245930449265725,
+          "estimated_mastery_change": 0.5245930449265725,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.17377922032422227,
+          "final_topic_estimates": {
+            "Graph representations": 0.17377922032422227,
+            "BFS": 0.9999999205028087,
+            "DFS": 0.9999999939526867
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 20,
+          "correct_rate": 0.7,
+          "final_mean_mastery": 0.8293581255628014,
+          "estimated_mastery_change": 0.6293581255628014,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.48807440608739705,
+          "final_topic_estimates": {
+            "Graph representations": 0.48807440608739705,
+            "BFS": 0.9999999981250136,
+            "DFS": 0.9999999724759937
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 21,
+          "correct_rate": 0.64,
+          "final_mean_mastery": 0.9048557091079888,
+          "estimated_mastery_change": 0.7048557091079888,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.34,
+          "minimum_topic_estimate": 0.7178401418557254,
+          "final_topic_estimates": {
+            "Graph representations": 0.7178401418557254,
+            "BFS": 0.9999999977915998,
+            "DFS": 0.9967269876766414
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 22,
+          "correct_rate": 0.6,
+          "final_mean_mastery": 0.854644084327441,
+          "estimated_mastery_change": 0.654644084327441,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.6091260570820186,
+          "final_topic_estimates": {
+            "Graph representations": 0.6091260570820186,
+            "BFS": 0.9548062058371461,
+            "DFS": 0.9999999900631583
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 23,
+          "correct_rate": 0.62,
+          "final_mean_mastery": 0.7289810908517658,
+          "estimated_mastery_change": 0.5289810908517658,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.18694334367454718,
+          "final_topic_estimates": {
+            "Graph representations": 0.18694334367454718,
+            "BFS": 0.999999999628289,
+            "DFS": 0.9999999292524611
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 24,
+          "correct_rate": 0.48,
+          "final_mean_mastery": 0.7235720924245544,
+          "estimated_mastery_change": 0.5235720924245544,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.17142857199566924,
+          "final_topic_estimates": {
+            "Graph representations": 0.17142857199566924,
+            "BFS": 0.9994014655047774,
+            "DFS": 0.9998862397732168
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 25,
+          "correct_rate": 0.58,
+          "final_mean_mastery": 0.7275584570387184,
+          "estimated_mastery_change": 0.5275584570387184,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.1858097246208318,
+          "final_topic_estimates": {
+            "Graph representations": 0.1858097246208318,
+            "BFS": 0.9999999997033726,
+            "DFS": 0.9968656467919508
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 26,
+          "correct_rate": 0.5,
+          "final_mean_mastery": 0.7242016998636736,
+          "estimated_mastery_change": 0.5242016998636736,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.17401182150273833,
+          "final_topic_estimates": {
+            "Graph representations": 0.17401182150273833,
+            "BFS": 0.999997175155472,
+            "DFS": 0.9985961029328103
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 27,
+          "correct_rate": 0.56,
+          "final_mean_mastery": 0.7396678894159159,
+          "estimated_mastery_change": 0.5396678894159159,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.32,
+          "minimum_topic_estimate": 0.22074987704228394,
+          "final_topic_estimates": {
+            "Graph representations": 0.22074987704228394,
+            "BFS": 0.9992563577553288,
+            "DFS": 0.9989974334501349
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 28,
+          "correct_rate": 0.74,
+          "final_mean_mastery": 0.9050951348851063,
+          "estimated_mastery_change": 0.7050951348851062,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.36,
+          "minimum_topic_estimate": 0.7152858272542999,
+          "final_topic_estimates": {
+            "Graph representations": 0.7152858272542999,
+            "BFS": 0.9999999977920947,
+            "DFS": 0.9999995796089243
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        },
+        {
+          "seed": 29,
+          "correct_rate": 0.64,
+          "final_mean_mastery": 0.7289951155181179,
+          "estimated_mastery_change": 0.5289951155181178,
+          "repetition_rate": 0.0,
+          "weakest_topic_selection_rate": 0.3,
+          "minimum_topic_estimate": 0.1869853503996369,
+          "final_topic_estimates": {
+            "Graph representations": 0.1869853503996369,
+            "BFS": 0.999999998122581,
+            "DFS": 0.9999999980321359
+          },
+          "topic_question_counts": {
+            "Graph representations": 17,
+            "BFS": 17,
+            "DFS": 16
+          },
+          "pool_wrapped_topics": []
+        }
+      ],
+      "summary": {
+        "correct_rate": {
+          "mean": 0.6113333333333334,
+          "sample_sd": 0.07477475755772192,
+          "minimum": 0.48,
+          "maximum": 0.74,
+          "seeds": 30
+        },
+        "final_mean_mastery": {
+          "mean": 0.8055472767070424,
+          "sample_sd": 0.09616376866523994,
+          "minimum": 0.716520218688335,
+          "maximum": 0.9911714546745036,
+          "seeds": 30
+        },
+        "estimated_mastery_change": {
+          "mean": 0.6055472767070423,
+          "sample_sd": 0.09616376866523994,
+          "minimum": 0.5165202186883351,
+          "maximum": 0.7911714546745037,
+          "seeds": 30
+        },
+        "minimum_topic_estimate": {
+          "mean": 0.4230224601758133,
+          "sample_sd": 0.2864351583194802,
+          "minimum": 0.17142857199566924,
+          "maximum": 0.9735148583133333,
+          "seeds": 30
+        },
+        "repetition_rate": {
+          "mean": 0.0,
+          "sample_sd": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0,
+          "seeds": 30
+        },
+        "weakest_topic_selection_rate": {
+          "mean": 0.32466666666666666,
+          "sample_sd": 0.029093586606143897,
+          "minimum": 0.28,
+          "maximum": 0.4,
+          "seeds": 30
+        }
+      }
+    }
+  ],
+  "pool_sizes": {
+    "Graph representations": 83,
+    "BFS": 145,
+    "DFS": 36
+  },
+  "limitations": [
+    "Post-hoc diagnostics on one small text sample, not a held-out or multimodal benchmark.",
+    "No LLM calls, tutor refusal checks, framework evaluation or real learning gains.",
+    "Simulated answers depend on fixed topic ability, not question wording or difficulty.",
+    "Minimum-topic figures are model estimates, not demonstrated mastery.",
+    "Original label sets are preserved; this does not establish exhaustive relevance judgments."
+  ]
+}

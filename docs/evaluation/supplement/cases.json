@@ -1,0 +1,39 @@
+{
+  "scope": "Small post-hoc diagnostic extension; not independently held out or a framework evaluation. All cases are retained, regardless of outcome.",
+  "paraphrases": [
+    {
+      "query": "Which first-in-first-out container supports the level-by-level traversal described in the notes?",
+      "reference_locations": ["paragraph 7", "paragraph 13", "paragraph 15"]
+    },
+    {
+      "query": "When a graph is stored as a table of vertex connections, how does its memory requirement scale with V?",
+      "reference_locations": ["paragraph 5"]
+    },
+    {
+      "query": "Starting from A, how many links must be traversed to reach D along the shortest route in the example?",
+      "reference_locations": ["paragraph 11", "paragraph 15"]
+    },
+    {
+      "query": "Which mechanism remembers unfinished branches during the depth-first procedure?",
+      "reference_locations": ["paragraph 13"]
+    }
+  ],
+  "unsupported_queries": [
+    {
+      "query": "Give Dijkstra's priority queue update rule for a weighted graph.",
+      "missing_information": "The notes do not describe Dijkstra or its priority-queue updates."
+    },
+    {
+      "query": "How does Kahn's algorithm compute a topological ordering of directed vertices?",
+      "missing_information": "The notes do not describe Kahn's algorithm or topological ordering."
+    },
+    {
+      "query": "How are negative-weight cycles detected with Bellman-Ford in a weighted graph?",
+      "missing_information": "The notes do not describe Bellman-Ford or negative-cycle detection."
+    },
+    {
+      "query": "Derive adjacency matrix eigenvalues for the worked graph.",
+      "missing_information": "The notes do not explain eigenvalues or how to calculate them."
+    }
+  ]
+}
